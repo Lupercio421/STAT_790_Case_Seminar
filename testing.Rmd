@@ -1,0 +1,26 @@
+---
+title: "Testing"
+output: html_document
+---
+
+```{r}
+library(RSocrata)
+df_first <- read.socrata(
+  "https://data.cityofnewyork.us/resource/ebb7-mvp5.json",
+  # app_token = "YOURAPPTOKENHERE",
+  # email     = "user@example.com",
+  # password  = "fakepassword"
+)
+```
+
+```{r}
+DSNY <- df_first
+library(lubridate)
+DSNY$month <- lubridate::parse_date_time(DSNY$month, "%y / %m")
+```
+
+```{r}
+library(tidyverse)
+DSNY_second <- DSNY %>% filter(month >= as.Date("2012-01-01") & month <= as.Date("2021-12-01"))
+```
+
