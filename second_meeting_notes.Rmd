@@ -1,0 +1,27 @@
+---
+title: "STAT 790 Second Meeting Notes"
+author: "Daniel Lupercio"
+date: "2/11/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Things to consider:
+* Perhaps look at each waste stream as an individual time series, so three time series
+* Or perhaps aggregate all three waste streams, per community district, per borough
+
+
+## Goal for next meeting:
+* Explore economic index per month for the previous two decades
+* Explore Census data for NYC population by the year
+* Explore Dynamic Regression Model
+  + With the goal of regressing the aggregated time series date onto the economic index and population count
+* Get familiar with ARIMAX modeling
+* Begin plotting and prelim analysis [aggregate the waste streams]
+* Continue to reference Forecasting: Principle and Practice textbook [https://otexts.com/fpp3/]
+* Continue to reference modeltime package

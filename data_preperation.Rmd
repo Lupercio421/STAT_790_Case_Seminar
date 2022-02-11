@@ -35,6 +35,7 @@ DSNY$month <- lubridate::parse_date_time(DSNY$month, "%y / %m")
 
 ```{r}
 DSNY_second <- DSNY %>% filter(month >= as.Date("2010-01-01") & month <= as.Date("2021-12-01"))
+DSNY_second %>% View()
 ```
 
 ```{r}
@@ -117,5 +118,31 @@ doe_first <- doe_first %>%
 
 ```{r}
 glimpse(doe_first)
+```
+
+
+## Getting US Holidays
+
+```{r}
+# holidays_dataset_2017 <- read.socrata(
+#   "https://date.nager.at/api/v3/publicholidays/2017/AT.json",
+#   # app_token = "YOURAPPTOKENHERE",
+#   # email     = "user@example.com",
+#   # password  = "fakepassword"
+# )
+```
+
+
+
+```{r}
+library(Holidays)
+# isHoliday(x = 20210421) #fail
+```
+```{r}
+#install.packages("RQuantLib")
+library("RQuantLib")
+```
+```{r}
+?isBusinessDay
 ```
 
