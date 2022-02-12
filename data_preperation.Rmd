@@ -20,21 +20,45 @@ df_first <- read.socrata(
 )
 ```
 
+### Some numeric columns are stored as characters. We also need to turn the month into a POSIXCT()
+
+
+```{r}
+df_first$month <- lubridate::parse_date_time(df_first$month, "%y / %m")
+```
+
+```{r}
+which(sapply(df_first, function(x) is.character(x))) #STUDY THIS
+```
+
+I don't know why the Socrata API is storing them as characters, when the data on the website is storing them as numbers. For now we can keep communitydistrict and borough_id as characters and convert them to integers later
+
+```{r}
+cols_num_floats <- c(4:6,8:11)
+df_first[cols_num_floats] <- sapply(df_first[cols_num_floats], as.numeric)
+#sapply(df_first, class) it worked
+cols_num_ints <- c(3,7)
+df_first[cols_num_ints] <- sapply(df_first[cols_num_ints], as.integer)
+sapply(df_first, class)
+```
+### Create copies of the dataframe
+
 ```{r}
 DSNY <- df_first
-DSNY$month <- lubridate::parse_date_time(DSNY$month, "%y / %m")
 ```
+
 
 ##Questions to answer:
 
-- How many variables will be worked with?
-- How many years worth of waste data is sufficient enough for training, testing and validating sets of data?
-- Which boroughs will be studied?
-- Which districts will be studied?
-- If working with timeseries models, ensure your variable of interest is turned into a ts object. Research the needed frequency and start dates with this data, as we are looking into monthly waste management values.
+* How many variables will be worked with?
+* How many years worth of waste data is sufficient enough for training, testing and validating sets of data?
+ + For now, our training data should fall from 2005 through 2020, with the testing data being 2021
+* Which boroughs will be studied?
+* Which districts will be studied?
+* If working with timeseries models, ensure your variable of interest is turned into a ts object. Research the needed frequency and start dates with this data, as we are looking into monthly waste management values.
 
 ```{r}
-DSNY_second <- DSNY %>% filter(month >= as.Date("2010-01-01") & month <= as.Date("2021-12-01"))
+DSNY_second <- DSNY %>% filter(month >= as.Date("2005-01-01") & month < as.Date("2021-01-01"))
 DSNY_second %>% View()
 ```
 
@@ -56,11 +80,51 @@ Run the code chunk below when you have decided on all the necessary variables th
 # DSNY_validation <- DSNY %>% filter(month >= as.Date("2021-01-01") & month <= as.Date("2021-12-01"))
 ```
 
+## Attempting to aggregate the waste streams into one borough
+
 
 ```{r}
-?knn_forecasting
-?as.ts()
+DSNY_second <-DSNY_second %>%
+  mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE)) # could also use refusetonscollected:mgptonscollected
 ```
+
+
+```{r}
+DSNY_second %>% 
+  group_by(borough) %>% 
+  summarise(., sum(total_waste))
+```
+
+```{r}
+DSNY_third <- DSNY_second %>% 
+  group_by(month, borough) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(borough)
+```
+
+### Great success!!!
+
+## Getting total waste, by community district, per month
+
+```{r}
+DSNY_second %>% 
+  group_by(month,borough,communitydistrict) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(communitydistrict)
+```
+
+It turns out this approach is no different from the DSNY_second data-frame. The totalwaste per communitydistrict, per month was already calculated. 
+
+Here below is what the dataframe would look like when filtered for BK01
+
+```{r}
+DSNY_second %>% 
+  filter(borough == "Brooklyn" & communitydistrict == 1) %>%
+  group_by(month,borough,communitydistrict) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(communitydistrict)
+```
+
 
 ## NYC DOE School Enrollment
 
@@ -146,3 +210,7 @@ library("RQuantLib")
 ?isBusinessDay
 ```
 
+## Looking for Economic Data variables
+
+https://fred.stlouisfed.org/tags/series?t=monthly%3Bprice%20index%3Busa&ob=pv&od=desc
+https://fred.stlouisfed.org/series/UNRATE
