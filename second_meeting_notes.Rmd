@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 * Explore economic index per month for the previous two decades
 * Explore Census data for NYC population by the year
 * Explore Dynamic Regression Model
-  + With the goal of regressing the aggregated time series date onto the economic index and population count
+  + With the goal of regressing the aggregated time series data onto the economic index and population count
 * Get familiar with ARIMAX modeling
 * Begin plotting and prelim analysis [aggregate the waste streams]
 * Continue to reference Forecasting: Principle and Practice textbook [https://otexts.com/fpp3/]
