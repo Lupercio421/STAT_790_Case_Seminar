@@ -19,6 +19,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Goal for next meeting:
 * Explore economic index per month for the previous two decades
 * Explore Census data for NYC population by the year
+  + https://popfactfinder.planning.nyc.gov/#12.25/40.724/-73.9868
+  + https://guides.newman.baruch.cuny.edu/nyc_data/nbhoods
+  + https://mcdc.missouri.edu/applications/acs/profiles/report.php?period=1&g=79500US3604102|04000US36
+  + https://cran.r-project.org/web/packages/censusapi/vignettes/getting-started.html
+  + https://fordham.libguides.com/NYresearch/demographics
+  + https://www.youtube.com/watch?v=0NzNllnmTLA
 * Explore Dynamic Regression Model
   + With the goal of regressing the aggregated time series data onto the economic index and population count
 * Get familiar with ARIMAX modeling
