@@ -1,5 +1,5 @@
 ---
-title: "Functions Practice"
+title: "R For Data Science: Chapter 19, Functions Practice"
 author: "DL"
 date: "2/15/2022"
 output: html_document
@@ -57,5 +57,44 @@ rescale01 <- function(x) {
   (x - rng[1]) / (rng[2] - rng[1])
 }
 rescale01(x)
+```
+
+## 19.2.1 Exercises
+
+1. Why is TRUE not a parameter to rescale01()? What would happen if x contained a single missing value, and na.rm was FALSE?
+
+```{r}
+rescale01_alt <- function(x, na.rm = FALSE) {
+  rng <- range(x, na.rm = na.rm, finite = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+rescale01_alt(c(NA, 1:5), na.rm = FALSE)
+```
+
+The option finite = TRUE to range() will drop all non-finite elements, and NA is a non-finite element.
+
+However, if both finite = FALSE and na.rm = FALSE, then this function will return a vector of NA values. Recall, arithmetic operations involving NA values return NA.
+
+```{r}
+rescale02_alt2 <- function(x, na.rm = FALSE, finite = FALSE) {
+  rng <- range(x)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+
+rescale02_alt(c(NA, 1:6), na.rm = FALSE, finite = FALSE)
+```
+
+2. In the second variant of rescale01(), infinite values are left unchanged. Rewrite rescale01() so that -Inf is mapped to 0, and Inf is mapped to 1.
+
+```{r}
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE, finite = TRUE)
+  y <- (x - rng[1]) / (rng[2] - rng[1]) #create this as a variable
+  y[y == -Inf] <- 0 #set these values as 0
+  y[y == Inf] <- 1 #set these values as 1
+  y
+}
+
+rescale01(c(Inf, -Inf, 0:5, NA))
 ```
 
