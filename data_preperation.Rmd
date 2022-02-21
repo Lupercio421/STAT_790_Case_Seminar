@@ -222,47 +222,4 @@ library("RQuantLib")
 https://fred.stlouisfed.org/tags/series?t=monthly%3Bprice%20index%3Busa&ob=pv&od=desc
 https://fred.stlouisfed.org/series/UNRATE
 
-## Getting started with censusapi
-
-```{r}
-library(censusapi)
-library(tidycensus)
-library(viridis)
-```
-
-```{r API key, warning=FALSE}
-Sys.setenv(CENSUS_KEY = "741791920011136da47e8b205ca50942f4eb1ee0")
-readRenviron("~/.Renviron")
-Sys.getenv("CENSUS_KEY")
-```
-
-```{r}
-apis <- listCensusApis()
-View(apis)
-```
-
-```{r}
-acs19 <- load_variables(year = 2019, dataset = 'acs5', cache = TRUE)
-view(acs19)
-```
-
-```{r}
-medval_md <- get_acs(geography = 'county', variables = 'B25077_001', state = 'MD', survey = 'acs5')
-View(medval_md)
-```
-
-```{r}
-medval_pgmd <- get_acs(geography = 'tract', variables = 'B25077_001', state = 'MD', county = 033, survey = 'acs5')
-View(medval_pgmd)
-```
-
-```{r}
-# no return values
-#get_acs(year = 2019, geography = 'zcta', state = 'NY', zcta = '11369', variables = 'B08006_001', survey = 'acs1')
-
-```
-
-```{r}
-get_acs(year = 2019, geography = 'zcta', state = 'NY', zcta = '11369', variables = 'B08006_001')
-```
 
