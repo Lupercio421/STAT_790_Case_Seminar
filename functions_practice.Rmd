@@ -98,3 +98,93 @@ rescale01 <- function(x) {
 rescale01(c(Inf, -Inf, 0:5, NA))
 ```
 
+3. Practice turning the following code snippets into functions. Think about what each function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?
+
+mean(is.na(x)) - this code calculates the proportion of NA values in a vector
+
+```{r}
+#We want to return the mean of a vector? The is.na(x) will return T or F for individual elements of this vector?
+
+is.na(c(0, 1, 2, NA, 4, NA)) #for example
+
+prop_na <- function(x){#proportion_na is the name & one input
+  mean(is.na(x))
+}
+
+print(prop_na(c(11,22,33, NA,NA,NA))) # there are 3 NA's and 3 numeric values, hence the proportion is 0.5: 3/6 values in the vector are NA
+```
+
+x / sum(x, na.rm = TRUE) - this will standardize every element in the vector
+
+* set na.rm = FALSE by default in order to make the function behave the same as the built-in functions like sum() and mean() in its handling of missing values.
+
+```{r}
+standardize_vector <- function(x, na.rm = FALSE){ #na.rm will be the optional parameter
+  return(x/sum(x, na.rm = na.rm)) #return was not necessary
+}
+```
+
+```{r}
+sum_to_one <- function(x, na.rm = FALSE) {
+  x / sum(x, na.rm = na.rm)
+}
+```
+
+
+```{r}
+standardize_vector(1:5)
+#sum_to_one(1:5)
+standardize_vector(c(1:5,NA)) # drop missing values when standardizing
+standardize_vector(c(1:5,NA), na.rm = TRUE)
+```
+
+sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE) - This code calculates th coefficient of variation (CV), and is defined as the ratio of the standard deviation $\sigma$ to $\mu$}
+
+```{r}
+coef_variation <- function(x, na.rm = FALSE){
+  return(sd(x, na.rm = na.rm)/mean(x, na.rm = na.rm))
+}
+```
+
+```{r}
+coef_variation(c(1:10))
+coef_variation(c(1:5,NA))
+coef_variation(c(1:5,NA), na.rm = TRUE)
+```
+
+$$
+Var(x)=\frac{1}{n-1} \sum_{i=1}^n (x_i - \bar{x}) ^2 \text{,}
+$$
+where $\bar{x} = (\sum_i^n x_i) / n$ is the sample mean. Skewness is defined as
+
+$$
+\mathrm{Skew}(x) = \frac{\frac{1}{n-2}\left(\sum_{i=1}^n(x_i - \bar x)^3\right)}{\mathrm{Var}(x)^{3/2}} \text{.}
+$$
+
+```{r}
+variance <- function(x, na.rm = TRUE){
+  n = length(x)
+  xbar <- mean(x, na.rm = TRUE)
+  squared_errors <- (x - xbar)^2
+  return(sum(squared_errors/(n-1)))
+}
+```
+
+```{r}
+variance(c(1:10))
+```
+
+```{r}
+skew <- function(x, na.rm = TRUE){
+  n = length(x)
+  xbar <- mean(x, na.rm = TRUE)
+  denom <- var(x)
+  #return(((1/(n-2))*(sum((x-xbar)^3)))/denom^(3/2))
+  return((sum((x - xbar) ^ 3) / (n - 2)) / denom ^ (3 / 2))
+}
+```
+
+```{r}
+skew(c(1,3,100))
+```
+
