@@ -101,7 +101,43 @@ DSNY_third <- DSNY_second %>%
   arrange(borough)
 ```
 
+The data-frames need to be converted to tsibble 
+
+```{r}
+# autoplot(DSNY_third, DSNY_third$month)
+```
+
+## Visualizations
+
+```{r}
+ggplot(DSNY_third, aes(month, total_waste)) +
+  geom_point() + #same plot as geom_jitter
+  facet_wrap(~borough) +
+  xlab('Year') +
+  ylab('Total Waste')
+```
+
+```{r}
+ggplot(DSNY_third, aes(month, total_waste)) +
+  geom_boxplot() + #same plot as geom_jitter
+  facet_wrap(~borough) +
+  xlab('Year') +
+  ylab('Total Waste')
+```
+
+#### Start with BX01
+
+```{r}
+
+```
+
+
 ### Great success!!!
+
+```{r}
+ggplot(DSNY_third, aes(month, total_waste)) + 
+```
+
 
 ## Getting total waste, by community district, per month
 
@@ -140,7 +176,7 @@ Link for Open Data: https://data.cityofnewyork.us/browse?q=Enrollment%20Statisti
 ```{r}
 #https://dev.socrata.com/foundry/data.cityofnewyork.us/e649-r223
 doe_first <- read.socrata(
-  "https://data.cityofnewyork.us/resource/e649-r223.json",
+  "https://data.cityofnewyork.us/resource/e649-r223.json"
   # app_token = "YOURAPPTOKENHERE",
   # email     = "user@example.com",
   # password  = "fakepassword"
@@ -188,6 +224,33 @@ doe_first <- doe_first %>%
 
 ```{r}
 glimpse(doe_first)
+```
+
+## Another attempt at the NYC DOE Data
+
+```{r}
+#https://dev.socrata.com/foundry/data.cityofnewyork.us/xzy8-qqgf
+doe_second <- read.socrata("https://data.cityofnewyork.us/resource/xzy8-qqgf.csv")
+```
+
+```{r}
+glimpse(doe_second)
+```
+
+```{r}
+which(sapply(doe_second, function(x) is.character(x)))
+```
+
+I don't want to make the 'year' as an datetime just yet. But all of these 
+
+```{r}
+doe2_col_nums <- c(4:18,20)
+```
+
+```{r}
+#df_first[cols_num_ints] <- sapply(df_first[cols_num_ints], as.integer)
+doe_second[doe2_col_nums] <- sapply(doe_second[doe2_col_nums], as.numeric)
+#glimpse(doe_second)
 ```
 
 
