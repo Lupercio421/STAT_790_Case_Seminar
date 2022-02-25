@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Goal for next meeting:
 * Explore economic index per month for the previous two decades
+  + https://www.newyorkfed.org/research/policy/weekly-economic-index#/interactive
 * Explore Census data for NYC population by the year
   + https://popfactfinder.planning.nyc.gov/#12.25/40.724/-73.9868
   + https://guides.newman.baruch.cuny.edu/nyc_data/nbhoods
@@ -25,9 +26,12 @@ knitr::opts_chunk$set(echo = TRUE)
   + https://cran.r-project.org/web/packages/censusapi/vignettes/getting-started.html
   + https://fordham.libguides.com/NYresearch/demographics
   + https://www.youtube.com/watch?v=0NzNllnmTLA
+  + https://www.census.gov/data/developers/data-sets/acs-5year.html
+  + https://storymaps.arcgis.com/stories/d30850ba28944619b94e8ee4f746d5c4
 * Explore Dynamic Regression Model
   + With the goal of regressing the aggregated time series data onto the economic index and population count
 * Get familiar with ARIMAX modeling
+  + https://robjhyndman.com/hyndsight/arimax/
 * Begin plotting and prelim analysis [aggregate the waste streams]
 * Continue to reference Forecasting: Principle and Practice textbook [https://otexts.com/fpp3/]
 * Continue to reference modeltime package
