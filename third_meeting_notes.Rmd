@@ -26,7 +26,6 @@ knitr::opts_chunk$set(echo = TRUE)
   + Make sure your dataframe is turned into a tibble
   + Create a model with auto.arima()
   + Compare the metrics (MAE, RMSE, MAPE)
-  + This is done with auto.arima()
 * Summarize your results
 * Then, if time permits, explore an ARIMAX model
   + For example, regress the Bronx refuse onto economic index, total population, etc...
