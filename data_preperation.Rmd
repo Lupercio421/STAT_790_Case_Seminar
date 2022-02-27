@@ -8,6 +8,7 @@ library(tidyverse)
 library(lubridate)
 library(RSocrata)
 library(tsfknn)
+library(fpp2)
 ```
 
 
@@ -125,17 +126,37 @@ ggplot(DSNY_third, aes(month, total_waste)) +
   ylab('Total Waste')
 ```
 
-#### Start with BX01
+#### Start with BX
 
 ```{r}
+DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx')
+```
 
+Why am I not getting returned a tsibble?
+
+```{r}
+#DSNY_third_bronx <- 
+DSNY_third_bronx %>%
+  mutate(Month = yearmonth(month)) %>% 
+  select(-month) %>% 
+  as_tibble(index = Month,
+            key = c(total_waste))
+```
+
+
+```{r}
+as_tsibble(DSNY_third_bronx, index = 'month', regular = FALSE)
+```
+
+```{r}
+autoplot(bx_ts, month)
 ```
 
 
 ### Great success!!!
 
 ```{r}
-ggplot(DSNY_third, aes(month, total_waste)) + 
+#ggplot(DSNY_third, aes(month, total_waste)) + 
 ```
 
 
