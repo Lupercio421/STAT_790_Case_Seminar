@@ -9,6 +9,8 @@ library(lubridate)
 library(RSocrata)
 library(tsfknn)
 library(fpp2)
+library(tsibble)
+library(feasts)
 ```
 
 
@@ -119,44 +121,81 @@ ggplot(DSNY_third, aes(month, total_waste)) +
 ```
 
 ```{r}
-ggplot(DSNY_third, aes(month, total_waste)) +
-  geom_boxplot() + #same plot as geom_jitter
-  facet_wrap(~borough) +
-  xlab('Year') +
-  ylab('Total Waste')
+# ggplot(DSNY_third, aes(month, total_waste)) +
+#   geom_boxplot() + #same plot as geom_jitter
+#   facet_wrap(~borough) +
+#   xlab('Year') +
+#   ylab('Total Waste')
 ```
 
-#### Start with BX
+### Start with BX
+
+Here I will attempt to make the dataframe as a univaraite time series, which is why I deleted the borough column. 
 
 ```{r}
-DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx')
+#DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') 
+DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') %>% select(-borough)
 ```
 
-Why am I not getting returned a tsibble?
+I will use two methods of converting this bronx dataset into a tsibble
+
+Method 1:
 
 ```{r}
-#DSNY_third_bronx <- 
-DSNY_third_bronx %>%
+bx_ts <- as_tsibble(DSNY_third_bronx, index = 'month', regular = FALSE)
+```
+
+Method 2:
+
+Here, we will use the yearmonth() function to provide a different way of creating the 'month' field. We will then drop the original 'month' field from the dataframe. ungroup() needed to be used or else we would get an "Adding missing grouping variables" error message. 
+
+```{r}
+DSNY_third_bronx_2 <- DSNY_third_bronx %>%
   mutate(Month = yearmonth(month)) %>% 
-  select(-month) %>% 
-  as_tibble(index = Month,
-            key = c(total_waste))
+  ungroup() %>% 
+  select(-month) 
+
+bx_ts2 <- as_tsibble(DSNY_third_bronx_2, index = 'Month', regular = FALSE)
+```
+
+#### Plot of method 1
+
+```{r}
+autoplot((bx_ts), total_waste) + labs(x = 'Month & Year', y = 'Total Waste')
+```
+
+#### Plot of method 2
+
+```{r}
+autoplot(bx_ts2, total_waste) + labs(x = 'Month & Year', y = 'Total Waste')
+```
+
+### Seasonal Plots
+
+The STAT 715 project created the time series dataframe with the forecast package and the as.ts() function. I am attempting to approach this project with the fpp2 package and the as_tsibble() function. The gg_season plot from fpp2 is working for now on the bx_ts tsibble. However, the ggseasonplot from the forecast package will not work.
+
+```{r}
+bx_ts %>% 
+  gg_season(total_waste)
+```
+```{r}
+# autoplot(a10, Cost) +
+#   labs(y = "$ (millions)",
+#        title = "Australian antidiabetic drug sales")
+# a10 %>%
+#   gg_season(Cost, labels = "both") +
+#   labs(y = "$ (millions)",
+#        title = "Seasonal plot: Antidiabetic drug sales")
+```
+
+```{r}
+ggseasonplot(as.ts(bx_ts))
 ```
 
 
 ```{r}
-as_tsibble(DSNY_third_bronx, index = 'month', regular = FALSE)
-```
-
-```{r}
-autoplot(bx_ts, month)
-```
-
-
-### Great success!!!
-
-```{r}
-#ggplot(DSNY_third, aes(month, total_waste)) + 
+bx_ts2 %>% 
+  gg_season(total_waste)
 ```
 
 
@@ -188,6 +227,10 @@ In doing this, we get single waste values per month. With the waste value repres
 ```{r}
 DSNY_third %>% group_by(month) %>% summarise(., total_waste2 = sum(total_waste))
 ```
+
+## Begin Preliminary Forecast
+
+
 
 ## NYC DOE School Enrollment
 
