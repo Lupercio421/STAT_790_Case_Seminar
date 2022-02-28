@@ -35,7 +35,7 @@ knitr::opts_chunk$set(echo = TRUE)
   + To compare the forecast values with the actual collected tonnage
 * Send the professor your summary (copy+past results) by next Fri morning
 
-## Acomplishments so far - 02/28/21
+## Acomplishments so far - 02/28/22
 
 *  The Bronx total waste collected is a tsibble
 * Preliminary plots such as the:
