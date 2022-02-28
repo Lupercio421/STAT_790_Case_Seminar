@@ -8,7 +8,7 @@ library(tidyverse)
 library(lubridate)
 library(RSocrata)
 library(tsfknn)
-library(fpp2)
+library(fpp3)
 library(tsibble)
 library(feasts)
 ```
@@ -137,7 +137,7 @@ Here I will attempt to make the dataframe as a univaraite time series, which is 
 DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') %>% select(-borough)
 ```
 
-I will use two methods of converting this bronx dataset into a tsibble
+I will use two methods of converting this Bronx dataset into a tsibble
 
 Method 1:
 
@@ -189,13 +189,80 @@ bx_ts %>%
 ```
 
 ```{r}
-ggseasonplot(as.ts(bx_ts))
+# ggseasonplot(as.ts(bx_ts))
+```
+
+The labels = 'right' parameter has helped display the years of each line to the right side of the plot
+
+```{r}
+bx_ts2 %>% 
+  gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Bronx Total Waste Collected", y = "Total Waste")
+```
+
+```{r}
+bx_ts %>% 
+  gg_season(total_waste, period = "year") + labs(title = "Seasonal Plot: Total Waste Collected in the Bronx", x = "Month", y = "Total Waste")
+```
+```{r}
+bx_ts2 %>% 
+  gg_subseries(total_waste) +
+  labs(y = "Total Waste",
+       title = "Seasonal Plot: Total Waste Collected in the Bronx")
+```
+
+I think that the reason we can not get a legend with individual color lines representing the year is because we have a lot of years worth of data. When using 2 or 3 years worth of data, it will work, but this plot then gets distorted because of the filter() function. It is best to use the entire tsibble() dataset. 
+
+```{r}
+# bx_ts2 %>% 
+#   filter(year(Month) == c(2005,2006)) %>% 
+#   gg_season(total_waste, period = "year") + labs(title = "Seasonal Plot: Total Waste Collected in the Bronx")
+```
+
+
+The polar coordinate plot does not look good.
+
+```{r}
+# bx_ts2 %>% 
+#   gg_season(total_waste, polar = TRUE) + ggtitle("Seasonal Plot: Bronx Total Waste Collected")
+```
+
+### Lag Plots
+
+#### It is best to difference the data first. difference() function will do that for you. And it would be best to mutate the difference variable to the dataset
+
+From 2.7 of F&P version 3
+
+We are returned a "Warning: Removed 1683 rows containing missing values (geom_point)". The lag plots are also returned empty as a result of this. 
+
+```{r}
+bx_ts2 %>% 
+  filter(year(Month) == 2020) %>% 
+  gg_lag(y = total_waste, period = NULL,lags = 1,geom = "point")
+```
+
+### ACF
+
+#### Difference the data first 
+
+When trying to find the ACF values, we are returned a "Warning: Provided data has an irregular interval, results should be treated with caution. Computing ACF by observation."
+
+```{r}
+bx_ts %>% ACF(total_waste, lag_max = 3)
+```
+
+```{r}
+feasts::unitroot_ndiffs(bx_ts$total_waste, alpha = 0.05, differences = 0:2, unitroot_fn = ~unitroot_kpss(.)["kpss_pvalue"])
 ```
 
 
 ```{r}
-bx_ts2 %>% 
-  gg_season(total_waste)
+bx_ts %>% 
+  ACF(total_waste, lag_max = 12) %>% 
+  autoplot()
+```
+
+```{r}
+bx_ts %>% features(total_waste, feat_acf)
 ```
 
 
