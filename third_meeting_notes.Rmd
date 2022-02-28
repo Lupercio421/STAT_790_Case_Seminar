@@ -34,3 +34,21 @@ knitr::opts_chunk$set(echo = TRUE)
 + Grab the data-set for 2021
   + To compare the forecast values with the actual collected tonnage
 * Send the professor your summary (copy+past results) by next Fri morning
+
+## Acomplishments so far - 02/28/21
+
+*  The Bronx total waste collected is a tsibble
+* Preliminary plots such as the:
+  + autoplot
+  + seasonal plot
+  + subseries plot, all have been created
+* Problems that have emerged:
+  + The Bronx time-series is not stationary yet, making it difficult to plot and get accurate ACF values
+
+## More to come:
+* Mutate the differenced data into the tsibble
+* Plot the ACF
+* Then perhaps begin forecasting
+  + For this, definitely try to read up on [https://otexts.com/fpp3/arima.html]
+  
+  
