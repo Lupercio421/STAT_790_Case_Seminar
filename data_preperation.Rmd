@@ -130,7 +130,7 @@ ggplot(DSNY_third, aes(month, total_waste)) +
 
 ### Start with BX
 
-Here I will attempt to make the dataframe as a univaraite time series, which is why I deleted the borough column. 
+Here I will attempt to make the dataframe as a univariate time series, which is why I deleted the borough column.
 
 ```{r}
 #DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') 
@@ -297,6 +297,42 @@ DSNY_third %>% group_by(month) %>% summarise(., total_waste2 = sum(total_waste))
 
 ## Begin Preliminary Forecast
 
+#### Attempting to difference the total_waste values from the Bronx dataframe
+
+```{r}
+# DSNY_third_bronx %>% 
+#   slice(sample(nrow(DSNY_third_bronx)))
+```
+
+In this attempt, I thought order_by month would solve the consistent errors I recieved if I did not include it. However, our diff values are NA's
+
+```{r}
+DSNY_third_bronx %>% 
+  mutate(diff = difference(total_waste, differences = 1, order_by = month))
+```
+
+Attempting another method from the fpp3 textbook [https://otexts.com/fpp3/graphics-exercises.html]
+
+With help from https://rdrr.io/cran/tsibble/man/difference.html
+
+Using the bx_ts2 data-frame returned a somewhat comprehensible results. If and when we plot, we can plot the Month on the X and the Diff values on the y. I think that creating the month_num was necessary to preserve the shape of the tsibble. The parameter "order_by = Month" does not change the outcome of our tsibble.
+
+```{r}
+bx_ts2 <- bx_ts2 %>% 
+  mutate(month_num = row_number()) %>% 
+  update_tsibble(index = month_num, regular = TRUE) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = Month))
+```
+
+The row_number() function is now working with the bx_ts as with the bx_ts2. seq.int() from base R did the trick. The month and total_waste varaibles needed to be ungrouped, without them there were consistent errors.
+
+```{r}
+bx_ts <- bx_ts %>% 
+  ungroup() %>% #ungroup saves the day
+  mutate(month_num = seq.int(nrow(bx_ts))) %>%
+  update_tsibble(index = month_num, regular = FALSE) %>% #right here, the index is 1's
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month))
+```
 
 
 ## NYC DOE School Enrollment

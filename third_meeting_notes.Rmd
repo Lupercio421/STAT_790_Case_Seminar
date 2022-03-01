@@ -45,10 +45,19 @@ knitr::opts_chunk$set(echo = TRUE)
 * Problems that have emerged:
   + The Bronx time-series is not stationary yet, making it difficult to plot and get accurate ACF values
 
-## More to come:
+### More to come:
 * Mutate the differenced data into the tsibble
 * Plot the ACF
 * Then perhaps begin forecasting
   + For this, definitely try to read up on [https://otexts.com/fpp3/arima.html]
   
+## Acomplishments so far - 03/01/22
+
+* Differenced values for the BX tsibbles have been created
+
+### More to come: 
+* Plot the ACF
+* Then perhaps begin forecasting
+  + For this, definitely try to read up on [https://otexts.com/fpp3/arima.html]
+* Read this TimeSeries article: [https://joonim.medium.com/tidy-forecasting-in-r-arima-models-864dc13773c1]
   
