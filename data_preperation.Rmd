@@ -324,102 +324,78 @@ bx_ts2 <- bx_ts2 %>%
   mutate(diff1 = difference(total_waste, differences = 1, order_by = Month))
 ```
 
-The row_number() function is now working with the bx_ts as with the bx_ts2. seq.int() from base R did the trick. The month and total_waste varaibles needed to be ungrouped, without them there were consistent errors.
+The row_number() function is now working with the bx_ts as with the bx_ts2. seq.int() from base R did the trick. The month and total_waste variables needed to be un-grouped, without them there were consistent errors. -Update: 3/2/22: I used the fill_gaps() to include the NA value, and set regular = TRUE, which was changed from False. The code was able to run with no problems.
 
 ```{r}
 bx_ts <- bx_ts %>% 
   ungroup() %>% #ungroup saves the day
   mutate(month_num = seq.int(nrow(bx_ts))) %>%
-  update_tsibble(index = month_num, regular = FALSE) %>% #right here, the index is 1's
-  mutate(diff1 = difference(total_waste, differences = 1, order_by = month))
+  update_tsibble(index = month_num, regular = TRUE) %>% #right here, the index is 1's
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month)) %>% 
+  tsibble::fill_gaps()
 ```
 
-
-## NYC DOE School Enrollment
-
-Link for Open Data: https://data.cityofnewyork.us/browse?q=Enrollment%20Statistics%20by%20District&sortBy=relevance
-
+## ACF
 
 ```{r}
-#https://dev.socrata.com/foundry/data.cityofnewyork.us/e649-r223
-doe_first <- read.socrata(
-  "https://data.cityofnewyork.us/resource/e649-r223.json"
-  # app_token = "YOURAPPTOKENHERE",
-  # email     = "user@example.com",
-  # password  = "fakepassword"
-)
+bx_ts %>% 
+  ACF(diff1, lag_max = 12) %>% 
+  autoplot()
 ```
 
+This ACF plot of the diff1 values are showing white noise characteristics. At all lags, the ACF values are close to 0. "For a white noise series, we expect 95% of the spikes in the ACF to lie within  $±2/√T$ where $T$ is the length of the time series. But at lags 1 and 12, there are spikes that are outside the bounds. I am still skeptical.  
+
 ```{r}
-glimpse(doe_first)
+bx_ts %>% features(diff1, ljung_box, lag = 12)
 ```
 
-We dont necessarily need to convert the year into a posixct. This represents a school year. I.e 2020-2021
+For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of  
+$r_1$ is often large and positive.
 
-My next goal is to explore how column sum or row sum will work on this data set. But first we need to convert the grades from characters to integers
+Here is an initial plot of the diff1 values from the bx_ts tsibble. Autoplot() wasn't working so a regular ggplot() will do. 
 
 ```{r}
-#doe_first <- doe_first_copy
-doe_first_copy <- doe_first
-doe_first[,4:19] <- lapply(doe_first[,4:19], as.integer)
-
-#Line 90 will convert all the NA's in the integer columns into zeros
-#doe_first %>% mutate_if(is.integer, function(x){ifelse(is.na(x), 0,x)})
-# doe_first %>% 
-#   summarise(across(doe_first[,4:19]), ~sum(., is.na(.), 0))
-
-```
-```{r}
-doe_first %>% 
-  mutate(across(doe_first[, 4:19], ~ sum(., is.na(.), 0)))
+bx_ts %>% 
+  ggplot(mapping = aes(x = month, y = diff1)) + geom_line() +
+  labs(x = "Year", y = "Total Waste", title = "Differenced Values: Bronx Total Waste Collected")
 ```
 
+The majority of the diff1 values are bounded between (-5000, 5000) tons.
+
+### KPSS Test for 'total_waste' and 'diff1'
+
+KPSS Test: $H_0:$ the data are stationary. We look for evidence that the null hypothesis is false. Consequently, small p-values (e.g., less than 0.05) suggest that differencing is required.
+
 ```{r}
-doe_first %>% summarise(across(where(is.numeric), ~ sum(.x)))
+bx_ts %>% features(total_waste, unitroot_kpss)
 ```
 
+Using the kpss test, we are returned a p-value of 0.06, we reject the $H_0$ that the total_waste values for the BX tons collected is stationary.
+
+I had a feeling that would be the case from the initial ACF plots, lets run the same code test, but for the diff1 values.
+
 ```{r}
-doe_first <- doe_first %>% 
-  mutate(Total = select(., pk:se1) %>% rowSums(na.rm = TRUE))
+bx_ts %>% features(diff1, unitroot_kpss)
 ```
+This time, the test statistic is tiny, and well within the range we would expect for stationary data, so the p-value is greater than 0.1. We can conclude that the differenced data appear stationary.
 
+
+Using KPSS tests to determine the appropriate number of first differences is carried out using the unitroot_ndiffs() feature. We are returned 0. Which is conflicting to the two previous results just found. 
 
 ```{r}
-# doe_first %>% 
-#   mutate(total_sum = summarise(across(where(is.numeric), ~ sum(.x))))
+bx_ts %>% features(total_waste, unitroot_ndiffs)
 ```
 
 ```{r}
-glimpse(doe_first)
+bx_total_waste_fit <- bx_ts %>% model(ARIMA(total_waste))
+bx_diff1_fit <- bx_ts %>% model(ARIMA(diff1))
+
+report(bx_total_waste_fit)
+print("---")
+report(bx_diff1_fit)
 ```
 
-## Another attempt at the NYC DOE Data
-
-```{r}
-#https://dev.socrata.com/foundry/data.cityofnewyork.us/xzy8-qqgf
-doe_second <- read.socrata("https://data.cityofnewyork.us/resource/xzy8-qqgf.csv")
-```
-
-```{r}
-glimpse(doe_second)
-```
-
-```{r}
-which(sapply(doe_second, function(x) is.character(x)))
-```
-
-I don't want to make the 'year' as an datetime just yet. But all of these 
-
-```{r}
-doe2_col_nums <- c(4:18,20)
-```
-
-```{r}
-#df_first[cols_num_ints] <- sapply(df_first[cols_num_ints], as.integer)
-doe_second[doe2_col_nums] <- sapply(doe_second[doe2_col_nums], as.numeric)
-#glimpse(doe_second)
-```
-
+Here I created an inital ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
 
 ## Getting US Holidays
 
