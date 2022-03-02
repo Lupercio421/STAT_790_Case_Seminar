@@ -15,7 +15,7 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
 * The Economic Index
 
 ## Resources that are helping me complete this project
-* Forecasting and Principles, third edition 
+* Forecasting: Principles and Practice, third edition 
 * Advanced R
 * R for Data Science
 * Numerous research papers taking on a similar task within other countries
