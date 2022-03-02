@@ -60,4 +60,11 @@ knitr::opts_chunk$set(echo = TRUE)
 * Then perhaps begin forecasting
   + For this, definitely try to read up on [https://otexts.com/fpp3/arima.html]
 * Read this TimeSeries article: [https://joonim.medium.com/tidy-forecasting-in-r-arima-models-864dc13773c1]
+
+## Acomplishments so far - 03/02/22
+
+* Updated the bx_ts tsibble
+* Plotted the ACF plot for the diff1 values
+* Produced some KPSS tests
+* Fit ARIMA models for both the total_waste and diff1 values
   
