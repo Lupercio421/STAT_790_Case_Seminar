@@ -392,10 +392,121 @@ bx_diff1_fit <- bx_ts %>% model(ARIMA(diff1))
 
 report(bx_total_waste_fit)
 print("---")
+print("---")
 report(bx_diff1_fit)
 ```
 
-Here I created an inital ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
+Here I created an initital ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
+
+The first model fit with the total waste values from the BX returned:
+
+$$
+y_t = 41207.10 + 0.334\epsilon_{t-1} + 0.327\epsilon_{t-2} + 0.237\epsilon_{t-3} + \epsilon_t
+$$
+
+The second model fit with the difference values from the BX returned:
+
+$$
+y_t = -0.527y_{t-1} - 0.190y_{t-2}
+$$
+
+Effectively what we have here in the second model is: 
+$$\text{If } c = 0 \text{ and }  d =1,\text{the long-term forecasts will go to a non-zero constant.}$$
+
+From [https://otexts.com/fpp3/non-seasonal-arima.html]
+
+Definition of partial autocorrelations: These measure the relationship between $y_t$ and $y_{t-k}$ after removing the effects of lags $1,2,3,..., k-1$
+
+### ACF plot of diff1
+
+```{r}
+bx_ts %>%
+  ACF(diff1) %>% 
+  autoplot()
+```
+
+### PACF plot of diff1
+
+```{r}
+bx_ts %>%
+  PACF(diff1) %>% 
+  autoplot()
+```
+
+```{r}
+bx_ts %>% 
+gg_tsdisplay(y = diff1, plot_type = "partial")
+```
+
+So the reason month_num is displayed because I updated the index of the tsibble to 'month_num' in chunch 41, which is indexed from 0-192. 
+
+### Residuals plot from bx_diff1_fit
+
+```{r}
+bx_diff1_fit %>% gg_tsresiduals()
+```
+
+For the bx diff1 ts fit Autocorrelation values, except for lag 12 are within the threshold limits, indicating that the residuals are behaving like white noise.
+
+### Residuals plot from bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit %>% gg_tsresiduals()
+```
+From a first glance, it does not appear as if there is a difference from the residual plots from the bx_diff1_fit
+
+```{r}
+# (bx_diff1_fit) %>% 
+#   filter(.model == 'search') %>% 
+#   features(diff1, ljung_box, lag = 10, dof = 2)
+```
+
+failed attempt at a portmanteau test
+
+The models need to be passed through the model() function. We will update the bx_diff1_fit here.
+
+```{r}
+bx_diff1_fit <- bx_ts %>% 
+  model(arima200 = ARIMA(diff1 ~ pdq(2,0,0)),
+        stepwise = ARIMA(diff1),
+        search = ARIMA(diff1, stepwise = FALSE))
+```
+
+## Preliminary forecast of bx_diff1_fit
+
+We have a successful prelim forecast of the bx_diff1_fit
+
+```{r}
+bx_diff1_fit %>%
+  forecast(h = 6) %>%
+  filter(.model == 'search') %>%
+  autoplot(bx_ts)
+```
+
+```{r}
+glance(bx_diff1_fit) %>% 
+  arrange(AICc) %>% 
+  select(.model:BIC)
+```
+
+
+```{r}
+bx_diff1_fit %>% select(search) %>% gg_tsresiduals(lag = 6)
+```
+I am not quite sure which model this is. 
+
+In-sample training accuracy does not require extra data provided.
+
+```{r}
+accuracy(bx_diff1_fit)
+```
+
+```{r}
+bx_diff1_fit %>% 
+  accuracy(bx_ts$diff1,
+          measures = list(interval_accuracy_measures, distribution_accuracy_measures))
+```
+
 
 ## Getting US Holidays
 
@@ -407,7 +518,6 @@ Here I created an inital ARIMA model on both the total_waste, and diff1 values f
 #   # password  = "fakepassword"
 # )
 ```
-
 
 
 ```{r}
