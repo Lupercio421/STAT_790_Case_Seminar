@@ -1,5 +1,5 @@
 # STAT_790_Case_Seminar
-Hey everyone, this semester I am enrolled in the Project Seminar course for the B.A./M.A. program. Using data from the NYC Department of Sanitation, I am analyzing waste tonnage collected throughout the five boroughs.
+Hey everyone, this semester I am enrolled in the Project Seminar course for the B.A./M.A. program. Using data from the [NYC Department of Sanitation](https://data.cityofnewyork.us/City-Government/DSNY-Monthly-Tonnage-Data/ebb7-mvp5), I am analyzing waste tonnage collected throughout the five boroughs. The data has been imported into R using an [API](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) and the RSocrata package.
 
 ## Goals for this project:
 * The challenge I am taking on is to create a univariate time series model to anaylze the total waste collected within the Bronx
@@ -15,9 +15,9 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
 * The Economic Index
 
 ## Resources that are helping me complete this project
-* Forecasting: Principles and Practice, third edition 
-* Advanced R
-* R for Data Science
+* [Forecasting: Principles and Practice, third edition](https://otexts.com/fpp3/)
+* [Advanced R](https://adv-r.hadley.nz/index.html)
+* [R for Data Science](https://r4ds.had.co.nz/)
 * Numerous research papers taking on a similar task within other countries
 
-#### The code for this project can be found on the data_preparation.Rmd file.
+#### The code for the initial work on this project can be found on the [data_preparation.Rmd](https://github.com/Lupercio421/STAT_790_Case_Seminar/blob/main/data_preperation.Rmd) file.
