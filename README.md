@@ -20,4 +20,4 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
 * R for Data Science
 * Numerous research papers taking on a similar task within other countries
 
-#### The code for this project can be found on the 'data_preparation.Rmd' file.
+#### The code for this project can be found on the data_preparation.Rmd file.
