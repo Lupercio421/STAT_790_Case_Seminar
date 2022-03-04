@@ -1,0 +1,36 @@
+---
+title: "Fourth Meeting Notes"
+author: "DL"
+date: "3/4/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Things to consider:
+* Why is there a decrease in the mean of total waste tonnage collected from the Bronx from 2010 - 2015?
+* Did the DSNY collect waste thoroughly during that time?
+  + Perhaps there was an exodus of people leaving NYC
+* Investigate the increase in 2020 waste tonnage
+  + Perhaps the pandemic was the route cause of this 
+* Research the textbook to take into account seasonality
+
+## Goal for next meeting:
+* Create a new ARIMA forecast on total_waste values
+  + p=0, 1, 2
+  + q=0, 1, 2
+  + look at AIC and BIC
+* Update the fourth meeting word document
+  + Prioritize updating the ARIMA models
+  + Add a forecasting precision
+  + Add prediction accuracy
+  + Add the forecast models onto a plot with either the total waste values or differenced values
+* Explore the economic index, as a predictor variable
+* Then try population values if possible
+  + You will need to find them per month, and specifically for each borough
+* With time permitting, explore dynamic regression
+
