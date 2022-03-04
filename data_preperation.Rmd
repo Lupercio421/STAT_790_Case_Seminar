@@ -172,7 +172,7 @@ autoplot(bx_ts2, total_waste) + labs(x = 'Month & Year', y = 'Total Waste')
 
 ### Seasonal Plots
 
-The STAT 715 project created the time series dataframe with the forecast package and the as.ts() function. I am attempting to approach this project with the fpp2 package and the as_tsibble() function. The gg_season plot from fpp2 is working for now on the bx_ts tsibble. However, the ggseasonplot from the forecast package will not work.
+The STAT 715 project created the time series dataframe with the forecast package and the as.ts() function. I am attempting to approach this project with the fpp3 package and the as_tsibble() function. The gg_season plot from feasts is working for now on the bx_ts tsibble. However, the ggseasonplot from the forecast package will not work.
 
 ```{r}
 bx_ts %>% 
@@ -335,7 +335,12 @@ bx_ts <- bx_ts %>%
   tsibble::fill_gaps()
 ```
 
-## ACF
+## ACF for total_waste
+
+```{r}
+bx_ts %>% ACF(total_waste) %>% autoplot()
+```
+
 
 ```{r}
 bx_ts %>% 
@@ -349,8 +354,7 @@ This ACF plot of the diff1 values are showing white noise characteristics. At al
 bx_ts %>% features(diff1, ljung_box, lag = 12)
 ```
 
-For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of  
-$r_1$ is often large and positive.
+For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of $r_1$ is often large and positive.
 
 Here is an initial plot of the diff1 values from the bx_ts tsibble. Autoplot() wasn't working so a regular ggplot() will do. 
 
@@ -396,7 +400,30 @@ print("---")
 report(bx_diff1_fit)
 ```
 
-Here I created an initital ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
+Here I created an initial ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
+
+For the values to be more precise(), we can use the coef()
+
+```{r}
+bx_diff1_fit %>% coef()
+```
+```{r}
+bx_diff1_fit %>% glance()
+```
+
+```{r}
+bx_diff1_fit %>% select(stepwise) %>% report()
+```
+```{r}
+bx_diff1_fit %>% select(arima200) %>% augment()
+```
+
+```{r}
+bx_diff1_fit %>% 
+  accuracy() %>% 
+  arrange(MASE)
+```
+
 
 The first model fit with the total waste values from the BX returned:
 
@@ -431,6 +458,17 @@ bx_ts %>%
 bx_ts %>%
   PACF(diff1) %>% 
   autoplot()
+```
+
+### Lag plot of total_waste
+
+```{r}
+bx_ts %>% gg_lag(total_waste, geom = "point", lags = 12)
+```
+### Lag plot of diff1
+
+```{r}
+bx_ts %>% gg_lag(diff1, geom = "point", lags = 12)
 ```
 
 ```{r}
@@ -479,9 +517,24 @@ We have a successful prelim forecast of the bx_diff1_fit
 ```{r}
 bx_diff1_fit %>%
   forecast(h = 6) %>%
-  filter(.model == 'search') %>%
-  autoplot(bx_ts)
+  # filter(.model == 'search') %>%
+  autoplot(bx_ts2)
 ```
+
+```{r}
+fc <- bx_diff1_fit %>%
+  forecast(h = 6)
+fc
+```
+
+```{r}
+fc %>% hilo(level = c(80,95))
+```
+
+```{r}
+fc %>% autoplot(bx_ts)
+```
+
 
 ```{r}
 glance(bx_diff1_fit) %>% 
@@ -502,11 +555,13 @@ accuracy(bx_diff1_fit)
 ```
 
 ```{r}
-bx_diff1_fit %>% 
-  accuracy(bx_ts$diff1,
-          measures = list(interval_accuracy_measures, distribution_accuracy_measures))
+# bx_diff1_fit %>% 
+#   accuracy(bx_ts$diff1,
+#           measures = list(interval_accuracy_measures, distribution_accuracy_measures))
 ```
 
+
+[Introduction to fable](https://cran.r-project.org/web/packages/fable/vignettes/fable.html)
 
 ## Getting US Holidays
 
@@ -518,7 +573,6 @@ bx_diff1_fit %>%
 #   # password  = "fakepassword"
 # )
 ```
-
 
 ```{r}
 library(Holidays)
