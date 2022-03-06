@@ -137,6 +137,25 @@ Here I will attempt to make the dataframe as a univariate time series, which is 
 DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') %>% select(-borough)
 ```
 
+#### Check average total waste values by year
+
+```{r}
+DSNY_third_bronx %>% 
+  group_by(Year = year(month)) %>% 
+  filter(., Year == c(2010:2015)) %>% 
+  summarise(., avg = mean(total_waste))
+```
+
+The professors hypothesis of the decreasing average of waste tonnage collected in the Bronx is semi-true. 
+
+```{r}
+DSNY_third_bronx %>% 
+  group_by(Year = year(month)) %>% 
+  filter(., Year == c(2010:2015)) %>% 
+  summarise(., min = min(total_waste))
+```
+
+
 I will use two methods of converting this Bronx dataset into a tsibble
 
 Method 1:
@@ -412,10 +431,10 @@ bx_diff1_fit %>% glance()
 ```
 
 ```{r}
-bx_diff1_fit %>% select(stepwise) %>% report()
+#bx_diff1_fit %>% select(stepwise) %>% report()
 ```
 ```{r}
-bx_diff1_fit %>% select(arima200) %>% augment()
+#bx_diff1_fit %>% select(arima200) %>% augment()
 ```
 
 ```{r}
