@@ -3,20 +3,25 @@ title: "Fourth Meeting Notes"
 author: "DL"
 date: "3/4/2022"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## Things to consider:
 * Why is there a decrease in the mean of total waste tonnage collected from the Bronx from 2010 - 2015?
+![A table displaying the average total waste values from 2010-2015](avg_total_waste_2010-2015.png) 
+  + The professors hypothesis of the decreasing average of waste tonnage collected in the Bronx is semi-true. The average total waste tonnage collected decreased during 2012, 2013 and 2014. 
+  
+
 * Did the DSNY collect waste thoroughly during that time?
-  + Perhaps there was an exodus of people leaving NYC
+  + Perhaps there was an exodus of people leaving NYC?
+![NYC Population from 2010 to 2015](New_York_City-population_2010_2015.png)
+> A plot from [macrotrends.net](https://www.macrotrends.net/cities/23083/new-york-city/population) \nshows that NYC Metro area population had increased from 2010 to 2015. 
+
 * Investigate the increase in 2020 waste tonnage
   + Perhaps the pandemic was the route cause of this 
+    + Yeah, an article from [Bloomberg](https://www.bloomberg.com/news/articles/2020-09-29/for-cities-2020-really-is-a-garbage-year) from 2020 wrote that this was common throughout the country. Municipal agencies put into effect a hiring freeze on sanitation departments. Leaving the sanitation workforce without adequate manpower and equipment when residential waste picked up. 
+    
 * Research the textbook to take into account seasonality
 
 ## Goal for next meeting:
