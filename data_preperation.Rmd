@@ -34,7 +34,7 @@ df_first$month <- lubridate::parse_date_time(df_first$month, "%y / %m")
 which(sapply(df_first, function(x) is.character(x))) #STUDY THIS
 ```
 
-I don't know why the Socrata API is storing them as characters, when the data on the website is storing them as numbers. For now we can keep communitydistrict and borough_id as characters and convert them to integers later
+I don't know why the Socrata API is storing them as characters, when the data on the [website](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) is storing them as numbers. For now we can keep communitydistrict and borough_id as characters and convert them to integers later
 
 ```{r}
 cols_num_floats <- c(4:6,8:11)
@@ -155,6 +155,7 @@ DSNY_third_bronx %>%
   summarise(., min = min(total_waste))
 ```
 
+#### tsibble
 
 I will use two methods of converting this Bronx dataset into a tsibble
 
@@ -218,6 +219,15 @@ bx_ts2 %>%
   gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Bronx Total Waste Collected", y = "Total Waste")
 ```
 
+#### Let's investigate this low 2010 BX value
+
+```{r}
+DSNY_third_bronx %>% 
+  filter(year(month) == 2010)
+```
+The total_waste tonnage in November was 43,688, but during the December, the total waste was 32,906.
+
+
 ```{r}
 bx_ts %>% 
   gg_season(total_waste, period = "year") + labs(title = "Seasonal Plot: Total Waste Collected in the Bronx", x = "Month", y = "Total Waste")
@@ -255,8 +265,8 @@ We are returned a "Warning: Removed 1683 rows containing missing values (geom_po
 
 ```{r}
 bx_ts2 %>% 
-  filter(year(Month) == 2020) %>% 
   gg_lag(y = total_waste, period = NULL,lags = 1,geom = "point")
+#filter(year(Month) == 2020) %>% 
 ```
 
 ### ACF
@@ -276,14 +286,15 @@ feasts::unitroot_ndiffs(bx_ts$total_waste, alpha = 0.05, differences = 0:2, unit
 
 ```{r}
 bx_ts %>% 
-  ACF(total_waste, lag_max = 12) %>% 
+  ACF(total_waste, lag_max = 24) %>% 
   autoplot()
 ```
+
+In this ACF plot, we see that $r_{12}$ is higher than all the other lags. This can potentially be due to a seasonal pattern in the waste tonnage data: the peaks and troughs tend to be 12 months apart, signaling the end and start of a new year. 
 
 ```{r}
 bx_ts %>% features(total_waste, feat_acf)
 ```
-
 
 ## Getting total waste, by community district, per month
 
@@ -520,6 +531,47 @@ From a first glance, it does not appear as if there is a difference from the res
 
 failed attempt at a portmanteau test
 
+#### bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit <- bx_ts %>% model(stepwise = ARIMA(total_waste),
+                                      arima100 = ARIMA(total_waste ~ pdq(1,0,0)),
+                                      arima300 = ARIMA(total_waste~ pdq(3,0,0)),
+                                      search = ARIMA(total_waste, stepwise = FALSE),
+                                      )
+```
+
+```{r}
+glance(bx_total_waste_fit) %>% 
+  arrange(AICc) %>% 
+  select(.model:BIC)
+```
+
+### Report of ARIMA100
+
+```{r}
+# report(bx_total_waste_fit) %>% filter(model == arima300)
+bx_total_waste_fit %>% select(.model = arima100) %>% report()
+bx_total_waste_fit %>% select(.model = arima300) %>% report()
+```
+
+
+### Preliminary forecast of bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit %>% 
+  forecast(h = 6) %>% 
+  autoplot(bx_ts)
+```
+
+#### Acuracy scores of this model
+
+```{r}
+accuracy(bx_total_waste_fit)
+```
+
+
+## bx_diff1_fit
 The models need to be passed through the model() function. We will update the bx_diff1_fit here.
 
 ```{r}
@@ -529,7 +581,8 @@ bx_diff1_fit <- bx_ts %>%
         search = ARIMA(diff1, stepwise = FALSE))
 ```
 
-## Preliminary forecast of bx_diff1_fit
+
+### Preliminary forecast of bx_diff1_fit
 
 We have a successful prelim forecast of the bx_diff1_fit
 
