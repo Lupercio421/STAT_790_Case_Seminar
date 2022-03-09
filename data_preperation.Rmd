@@ -50,6 +50,12 @@ sapply(df_first, class)
 DSNY <- df_first
 ```
 
+#### Total_waste column created
+
+```{r}
+DSNY <- DSNY %>% mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE))
+```
+
 
 ##Questions to answer:
 
@@ -61,18 +67,18 @@ DSNY <- df_first
 * If working with timeseries models, ensure your variable of interest is turned into a ts object. Research the needed frequency and start dates with this data, as we are looking into monthly waste management values.
 
 ```{r}
-DSNY_second <- DSNY %>% filter(month >= as.Date("2005-01-01") & month < as.Date("2021-01-01"))
+DSNY_train <- DSNY %>% filter(month >= as.Date("2005-01-01") & month < as.Date("2021-01-01"))
 ```
 
 ```{r}
 #Default borough, unless specified is the Bronx
 #default communitydistrict is 01
-DSNY_second %>% 
+DSNY_train %>% 
   group_by(borough, communitydistrict) %>% 
   slice(-(1:12))
 ```
 ```{r}
-DSNY_second %>% 
+DSNY_train %>% 
   slice(n() -19:0)
 ```
 
@@ -86,19 +92,19 @@ Run the code chunk below when you have decided on all the necessary variables th
 
 
 ```{r}
-DSNY_second <-DSNY_second %>%
-  mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE)) # could also use refusetonscollected:mgptonscollected
+# DSNY_train <-DSNY_train %>%
+#   mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE)) # could also use refusetonscollected:mgptonscollected
 ```
 
 
 ```{r}
-DSNY_second %>% 
+DSNY_train %>% 
   group_by(borough) %>% 
   summarise(., sum(total_waste))
 ```
 
 ```{r}
-DSNY_third <- DSNY_second %>% 
+DSNY_third <- DSNY_train %>% 
   group_by(month, borough) %>% 
   summarise(., total_waste = sum(total_waste)) %>% 
   arrange(borough)
@@ -299,18 +305,18 @@ bx_ts %>% features(total_waste, feat_acf)
 ## Getting total waste, by community district, per month
 
 ```{r}
-DSNY_second %>% 
+DSNY_train %>% 
   group_by(month,borough,communitydistrict) %>% 
   summarise(., total_waste = sum(total_waste)) %>% 
   arrange(communitydistrict)
 ```
 
-It turns out this approach is no different from the DSNY_second data-frame. The totalwaste per communitydistrict, per month was already calculated. 
+It turns out this approach is no different from the DSNY_train data-frame. The totalwaste per communitydistrict, per month was already calculated. 
 
 Here below is what the dataframe would look like when filtered for BK01
 
 ```{r}
-DSNY_second %>% 
+DSNY_train %>% 
   filter(borough == "Brooklyn" & communitydistrict == 1) %>%
   group_by(month,borough,communitydistrict) %>% 
   summarise(., total_waste = sum(total_waste)) %>% 
@@ -506,7 +512,7 @@ bx_ts %>%
 gg_tsdisplay(y = diff1, plot_type = "partial")
 ```
 
-So the reason month_num is displayed because I updated the index of the tsibble to 'month_num' in chunch 41, which is indexed from 0-192. 
+So the reason month_num is displayed because I updated the index of the tsibble to 'month_num' in chunck 41, which is indexed from 0-192. 
 
 ### Residuals plot from bx_diff1_fit
 
@@ -547,21 +553,29 @@ glance(bx_total_waste_fit) %>%
   select(.model:BIC)
 ```
 
-### Report of ARIMA100
+### Report of ARIMA100 & ARIMA300
 
 ```{r}
 # report(bx_total_waste_fit) %>% filter(model == arima300)
 bx_total_waste_fit %>% select(.model = arima100) %>% report()
+print("---")
 bx_total_waste_fit %>% select(.model = arima300) %>% report()
+print("---")
+bx_total_waste_fit %>% select(.model = search) %>% report()
 ```
-
 
 ### Preliminary forecast of bx_total_waste_fit
 
 ```{r}
 bx_total_waste_fit %>% 
-  forecast(h = 6) %>% 
-  autoplot(bx_ts)
+  forecast(h = 8) %>% 
+  autoplot(bx_ts, level = NULL)
+```
+
+After spending a lot of time researching how to return the point forecasts of the search model from above, I believe the point_forecast parameter needs to be passed. I am still unsure as to if the point forecasts returned below are the same point forecasts plotted above.
+
+```{r}
+bx_total_waste_fit %>% select(.model = search) %>% forecast(h = 8,point_forecast = list(.mean = mean))
 ```
 
 #### Acuracy scores of this model
@@ -632,6 +646,61 @@ accuracy(bx_diff1_fit)
 #           measures = list(interval_accuracy_measures, distribution_accuracy_measures))
 ```
 
+## Creating the Bronx Testing Set
+
+Be aware that we have not excluded the months of January and February of 2022 in this line of code
+
+```{r}
+DSNY_test <- DSNY %>% filter(month >= as.Date("2021-01-01"))
+# DSNY_train %>%
+#   mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE))
+# DSNY %>% mutate(total_waste = select(., 4:6) %>%  rowSums(na.rm = TRUE))
+```
+
+
+## Goal: Run the fitted ARIMA models on the test set of BX values
+
+### Let's filter out the Bronx values and 
+
+```{r}
+bx_test = DSNY_test %>% 
+  group_by(month, borough) %>%
+  filter(borough_id == 2) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  ungroup() # I added ungrouped at the end to avoid any potential errors in plots or manipulations later on
+```
+### Now lets convert it to a tsibble
+
+```{r}
+# bx_test_ts <- as_tsibble(bx_test, index = 'month', regular = FALSE)
+bx_test_ts <- bx_test_ts %>% 
+  mutate(month_num = row_number()) %>% #seq.int(nrow(.)) also works as well
+  update_tsibble(index = month_num, regular = TRUE) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num)) %>% 
+  tsibble::fill_gaps()
+```
+
+We will work with the index as 'month_num'
+
+```{r}
+bx_test_ts %>% 
+  ggplot(mapping = aes(x = month, y = total_waste)) + geom_line() +
+  labs(x = "Month & Year", y = "Total Waste", title = "Bronx Total Waste Collected")
+```
+
+
+### ACF plot for total_waste from, the test set
+
+```{r}
+bx_test_ts %>% ACF(total_waste) %>% autoplot()
+```
+
+```{r}
+bx_total_waste_fit %>%
+  forecast(h = 8) %>%
+  autoplot(bx_test_ts, level = NULL)
+```
+As we can see, we can not use the model fitted on the training set, onto the test set. I believe we will need to create a new model, using the parameters from the training models. 
 
 [Introduction to fable](https://cran.r-project.org/web/packages/fable/vignettes/fable.html)
 
