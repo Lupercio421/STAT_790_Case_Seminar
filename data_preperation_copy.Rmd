@@ -1,0 +1,681 @@
+---
+title: "Prepping the data"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+```
+
+
+```{r}
+df_first <- read.socrata(
+  "https://data.cityofnewyork.us/resource/ebb7-mvp5.json",
+  # app_token = "YOURAPPTOKENHERE",
+  # email     = "user@example.com",
+  # password  = "fakepassword"
+)
+```
+
+### Some numeric columns are stored as characters. We also need to turn the month into a POSIXCT()
+
+
+```{r}
+df_first$month <- lubridate::parse_date_time(df_first$month, "%y / %m")
+```
+
+```{r}
+which(sapply(df_first, function(x) is.character(x))) #STUDY THIS
+```
+
+I don't know why the Socrata API is storing them as characters, when the data on the [website](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) is storing them as numbers. For now we can keep communitydistrict and borough_id as characters and convert them to integers later
+
+```{r}
+cols_num_floats <- c(4:6,8:11)
+df_first[cols_num_floats] <- sapply(df_first[cols_num_floats], as.numeric)
+#sapply(df_first, class) it worked
+cols_num_ints <- c(3,7)
+df_first[cols_num_ints] <- sapply(df_first[cols_num_ints], as.integer)
+sapply(df_first, class)
+```
+### Create copies of the dataframe
+
+```{r}
+DSNY <- df_first
+```
+
+
+##Questions to answer:
+
+* How many variables will be worked with?
+* How many years worth of waste data is sufficient enough for training, testing and validating sets of data?
+ + For now, our training data should fall from 2005 through 2020, with the testing data being 2021
+* Which boroughs will be studied?
+* Which districts will be studied?
+* If working with timeseries models, ensure your variable of interest is turned into a ts object. Research the needed frequency and start dates with this data, as we are looking into monthly waste management values.
+
+```{r}
+DSNY_second <- DSNY %>% filter(month >= as.Date("2005-01-01") & month < as.Date("2021-01-01"))
+```
+
+```{r}
+#Default borough, unless specified is the Bronx
+#default communitydistrict is 01
+DSNY_second %>% 
+  group_by(borough, communitydistrict) %>% 
+  slice(-(1:12))
+```
+```{r}
+DSNY_second %>% 
+  slice(n() -19:0)
+```
+
+Run the code chunk below when you have decided on all the necessary variables that can be created and used on the DSNY data
+
+```{r}
+# DSNY_validation <- DSNY %>% filter(month >= as.Date("2021-01-01") & month <= as.Date("2021-12-01"))
+```
+
+## Attempting to aggregate the waste streams into one borough
+
+
+```{r}
+DSNY_second <-DSNY_second %>%
+  mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE)) # could also use refusetonscollected:mgptonscollected
+```
+
+
+```{r}
+DSNY_second %>% 
+  group_by(borough) %>% 
+  summarise(., sum(total_waste))
+```
+
+```{r}
+DSNY_third <- DSNY_second %>% 
+  group_by(month, borough) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(borough)
+```
+
+The data-frames need to be converted to tsibble 
+
+```{r}
+# autoplot(DSNY_third, DSNY_third$month)
+```
+
+## Visualizations
+
+```{r}
+ggplot(DSNY_third, aes(month, total_waste)) +
+  geom_point() + #same plot as geom_jitter
+  facet_wrap(~borough) +
+  xlab('Year') +
+  ylab('Total Waste')
+```
+
+```{r}
+# ggplot(DSNY_third, aes(month, total_waste)) +
+#   geom_boxplot() + #same plot as geom_jitter
+#   facet_wrap(~borough) +
+#   xlab('Year') +
+#   ylab('Total Waste')
+```
+
+### Start with BX
+
+Here I will attempt to make the dataframe as a univariate time series, which is why I deleted the borough column.
+
+```{r}
+#DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') 
+DSNY_third_bronx <- DSNY_third %>% filter(borough == 'Bronx') %>% select(-borough)
+```
+
+#### Check average total waste values by year
+
+```{r}
+DSNY_third_bronx %>% 
+  group_by(Year = year(month)) %>% 
+  filter(., Year == c(2010:2015)) %>% 
+  summarise(., avg = mean(total_waste))
+```
+
+The professors hypothesis of the decreasing average of waste tonnage collected in the Bronx is semi-true. 
+
+```{r}
+DSNY_third_bronx %>% 
+  group_by(Year = year(month)) %>% 
+  filter(., Year == c(2010:2015)) %>% 
+  summarise(., min = min(total_waste))
+```
+
+#### tsibble
+
+I will use two methods of converting this Bronx dataset into a tsibble
+
+Method 1:
+
+```{r}
+bx_ts <- as_tsibble(DSNY_third_bronx, index = 'month', regular = FALSE)
+```
+
+Method 2:
+
+Here, we will use the yearmonth() function to provide a different way of creating the 'month' field. We will then drop the original 'month' field from the dataframe. ungroup() needed to be used or else we would get an "Adding missing grouping variables" error message. 
+
+```{r}
+DSNY_third_bronx_2 <- DSNY_third_bronx %>%
+  mutate(Month = yearmonth(month)) %>% 
+  ungroup() %>% 
+  select(-month) 
+
+bx_ts2 <- as_tsibble(DSNY_third_bronx_2, index = 'Month', regular = FALSE)
+```
+
+#### Plot of method 1
+
+```{r}
+autoplot((bx_ts), total_waste) + labs(x = 'Month & Year', y = 'Total Waste')
+```
+
+#### Plot of method 2
+
+```{r}
+autoplot(bx_ts2, total_waste) + labs(x = 'Month & Year', y = 'Total Waste')
+```
+
+### Seasonal Plots
+
+The STAT 715 project created the time series dataframe with the forecast package and the as.ts() function. I am attempting to approach this project with the fpp3 package and the as_tsibble() function. The gg_season plot from feasts is working for now on the bx_ts tsibble. However, the ggseasonplot from the forecast package will not work.
+
+```{r}
+bx_ts %>% 
+  gg_season(total_waste)
+```
+```{r}
+# autoplot(a10, Cost) +
+#   labs(y = "$ (millions)",
+#        title = "Australian antidiabetic drug sales")
+# a10 %>%
+#   gg_season(Cost, labels = "both") +
+#   labs(y = "$ (millions)",
+#        title = "Seasonal plot: Antidiabetic drug sales")
+```
+
+```{r}
+# ggseasonplot(as.ts(bx_ts))
+```
+
+The labels = 'right' parameter has helped display the years of each line to the right side of the plot
+
+```{r}
+bx_ts2 %>% 
+  gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Bronx Total Waste Collected", y = "Total Waste")
+```
+
+#### Let's investigate this low 2010 BX value
+
+```{r}
+DSNY_third_bronx %>% 
+  filter(year(month) == 2010)
+```
+The total_waste tonnage in November was 43,688, but during the December, the total waste was 32,906.
+
+
+```{r}
+bx_ts %>% 
+  gg_season(total_waste, period = "year") + labs(title = "Seasonal Plot: Total Waste Collected in the Bronx", x = "Month", y = "Total Waste")
+```
+```{r}
+bx_ts2 %>% 
+  gg_subseries(total_waste) +
+  labs(y = "Total Waste",
+       title = "Seasonal Plot: Total Waste Collected in the Bronx")
+```
+
+I think that the reason we can not get a legend with individual color lines representing the year is because we have a lot of years worth of data. When using 2 or 3 years worth of data, it will work, but this plot then gets distorted because of the filter() function. It is best to use the entire tsibble() dataset. 
+
+```{r}
+# bx_ts2 %>% 
+#   filter(year(Month) == c(2005,2006)) %>% 
+#   gg_season(total_waste, period = "year") + labs(title = "Seasonal Plot: Total Waste Collected in the Bronx")
+```
+
+
+The polar coordinate plot does not look good.
+
+```{r}
+# bx_ts2 %>% 
+#   gg_season(total_waste, polar = TRUE) + ggtitle("Seasonal Plot: Bronx Total Waste Collected")
+```
+
+### Lag Plots
+
+#### It is best to difference the data first. difference() function will do that for you. And it would be best to mutate the difference variable to the dataset
+
+From 2.7 of F&P version 3
+
+We are returned a "Warning: Removed 1683 rows containing missing values (geom_point)". The lag plots are also returned empty as a result of this. 
+
+```{r}
+bx_ts2 %>% 
+  gg_lag(y = total_waste, period = NULL,lags = 1,geom = "point")
+#filter(year(Month) == 2020) %>% 
+```
+
+### ACF
+
+#### Difference the data first 
+
+When trying to find the ACF values, we are returned a "Warning: Provided data has an irregular interval, results should be treated with caution. Computing ACF by observation."
+
+```{r}
+bx_ts %>% ACF(total_waste, lag_max = 3)
+```
+
+```{r}
+feasts::unitroot_ndiffs(bx_ts$total_waste, alpha = 0.05, differences = 0:2, unitroot_fn = ~unitroot_kpss(.)["kpss_pvalue"])
+```
+
+
+```{r}
+bx_ts %>% 
+  ACF(total_waste, lag_max = 24) %>% 
+  autoplot()
+```
+
+In this ACF plot, we see that $r_{12}$ is higher than all the other lags. This can potentially be due to a seasonal pattern in the waste tonnage data: the peaks and troughs tend to be 12 months apart, signaling the end and start of a new year. 
+
+```{r}
+bx_ts %>% features(total_waste, feat_acf)
+```
+
+## Getting total waste, by community district, per month
+
+```{r}
+DSNY_second %>% 
+  group_by(month,borough,communitydistrict) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(communitydistrict)
+```
+
+It turns out this approach is no different from the DSNY_second data-frame. The totalwaste per communitydistrict, per month was already calculated. 
+
+Here below is what the dataframe would look like when filtered for BK01
+
+```{r}
+DSNY_second %>% 
+  filter(borough == "Brooklyn" & communitydistrict == 1) %>%
+  group_by(month,borough,communitydistrict) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  arrange(communitydistrict)
+```
+
+## Attempt to aggregate the waste streams as a NYC value
+
+In doing this, we get single waste values per month. With the waste value representing the total of the three waste streams collected for NYC
+
+```{r}
+DSNY_third %>% group_by(month) %>% summarise(., total_waste2 = sum(total_waste))
+```
+
+## Begin Preliminary Forecast
+
+#### Attempting to difference the total_waste values from the Bronx dataframe
+
+```{r}
+# DSNY_third_bronx %>% 
+#   slice(sample(nrow(DSNY_third_bronx)))
+```
+
+In this attempt, I thought order_by month would solve the consistent errors I recieved if I did not include it. However, our diff values are NA's
+
+```{r}
+DSNY_third_bronx %>% 
+  mutate(diff = difference(total_waste, differences = 1, order_by = month))
+```
+
+Attempting another method from the fpp3 textbook [https://otexts.com/fpp3/graphics-exercises.html]
+
+With help from https://rdrr.io/cran/tsibble/man/difference.html
+
+Using the bx_ts2 data-frame returned a somewhat comprehensible results. If and when we plot, we can plot the Month on the X and the Diff values on the y. I think that creating the month_num was necessary to preserve the shape of the tsibble. The parameter "order_by = Month" does not change the outcome of our tsibble.
+
+```{r}
+bx_ts2 <- bx_ts2 %>% 
+  mutate(month_num = row_number()) %>% 
+  update_tsibble(index = month_num, regular = TRUE) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = Month))
+```
+
+The row_number() function is now working with the bx_ts as with the bx_ts2. seq.int() from base R did the trick. The month and total_waste variables needed to be un-grouped, without them there were consistent errors. -Update: 3/2/22: I used the fill_gaps() to include the NA value, and set regular = TRUE, which was changed from False. The code was able to run with no problems.
+
+```{r}
+bx_ts <- bx_ts %>% 
+  ungroup() %>% #ungroup saves the day
+  mutate(month_num = seq.int(nrow(bx_ts))) %>%
+  update_tsibble(index = month_num, regular = TRUE) %>% #right here, the index is 1's
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month)) %>% 
+  tsibble::fill_gaps()
+```
+
+## ACF for total_waste
+
+```{r}
+bx_ts %>% ACF(total_waste) %>% autoplot()
+```
+
+
+```{r}
+bx_ts %>% 
+  ACF(diff1, lag_max = 12) %>% 
+  autoplot()
+```
+
+This ACF plot of the diff1 values are showing white noise characteristics. At all lags, the ACF values are close to 0. "For a white noise series, we expect 95% of the spikes in the ACF to lie within  $±2/√T$ where $T$ is the length of the time series. But at lags 1 and 12, there are spikes that are outside the bounds. I am still skeptical.  
+
+```{r}
+bx_ts %>% features(diff1, ljung_box, lag = 12)
+```
+
+For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of $r_1$ is often large and positive.
+
+Here is an initial plot of the diff1 values from the bx_ts tsibble. Autoplot() wasn't working so a regular ggplot() will do. 
+
+```{r}
+bx_ts %>% 
+  ggplot(mapping = aes(x = month, y = diff1)) + geom_line() +
+  labs(x = "Year", y = "Total Waste", title = "Differenced Values: Bronx Total Waste Collected")
+```
+
+The majority of the diff1 values are bounded between (-5000, 5000) tons.
+
+### KPSS Test for 'total_waste' and 'diff1'
+
+KPSS Test: $H_0:$ the data are stationary. We look for evidence that the null hypothesis is false. Consequently, small p-values (e.g., less than 0.05) suggest that differencing is required.
+
+```{r}
+bx_ts %>% features(total_waste, unitroot_kpss)
+```
+
+Using the kpss test, we are returned a p-value of 0.06, we reject the $H_0$ that the total_waste values for the BX tons collected is stationary.
+
+I had a feeling that would be the case from the initial ACF plots, lets run the same code test, but for the diff1 values.
+
+```{r}
+bx_ts %>% features(diff1, unitroot_kpss)
+```
+This time, the test statistic is tiny, and well within the range we would expect for stationary data, so the p-value is greater than 0.1. We can conclude that the differenced data appear stationary.
+
+
+Using KPSS tests to determine the appropriate number of first differences is carried out using the unitroot_ndiffs() feature. We are returned 0. Which is conflicting to the two previous results just found. 
+
+```{r}
+bx_ts %>% features(total_waste, unitroot_ndiffs)
+```
+
+```{r}
+bx_total_waste_fit <- bx_ts %>% model(ARIMA(total_waste))
+bx_diff1_fit <- bx_ts %>% model(ARIMA(diff1))
+
+report(bx_total_waste_fit)
+print("---")
+print("---")
+report(bx_diff1_fit)
+```
+
+Here I created an initial ARIMA model on both the total_waste, and diff1 values for the BX. Still need to explore why for the total_waste values, I am not getting a recommendation of differencing the data. 
+
+For the values to be more precise(), we can use the coef()
+
+```{r}
+bx_diff1_fit %>% coef()
+```
+```{r}
+bx_diff1_fit %>% glance()
+```
+
+```{r}
+#bx_diff1_fit %>% select(stepwise) %>% report()
+```
+```{r}
+#bx_diff1_fit %>% select(arima200) %>% augment()
+```
+
+```{r}
+bx_diff1_fit %>% 
+  accuracy() %>% 
+  arrange(MASE)
+```
+
+
+The first model fit with the total waste values from the BX returned:
+
+$$
+y_t = 41207.10 + 0.334\epsilon_{t-1} + 0.327\epsilon_{t-2} + 0.237\epsilon_{t-3} + \epsilon_t
+$$
+
+The second model fit with the difference values from the BX returned:
+
+$$
+y_t = -0.527y_{t-1} - 0.190y_{t-2}
+$$
+
+Effectively what we have here in the second model is: 
+$$\text{If } c = 0 \text{ and }  d =1,\text{the long-term forecasts will go to a non-zero constant.}$$
+
+From [https://otexts.com/fpp3/non-seasonal-arima.html]
+
+Definition of partial autocorrelations: These measure the relationship between $y_t$ and $y_{t-k}$ after removing the effects of lags $1,2,3,..., k-1$
+
+### ACF plot of diff1
+
+```{r}
+bx_ts %>%
+  ACF(diff1) %>% 
+  autoplot()
+```
+
+### PACF plot of diff1
+
+```{r}
+bx_ts %>%
+  PACF(diff1) %>% 
+  autoplot()
+```
+
+### Lag plot of total_waste
+
+```{r}
+bx_ts %>% gg_lag(total_waste, geom = "point", lags = 12)
+```
+### Lag plot of diff1
+
+```{r}
+bx_ts %>% gg_lag(diff1, geom = "point", lags = 12)
+```
+
+```{r}
+bx_ts %>% 
+gg_tsdisplay(y = diff1, plot_type = "partial")
+```
+
+So the reason month_num is displayed because I updated the index of the tsibble to 'month_num' in chunck 41, which is indexed from 0-192. 
+
+### Residuals plot from bx_diff1_fit
+
+```{r}
+bx_diff1_fit %>% gg_tsresiduals()
+```
+
+For the bx diff1 ts fit Autocorrelation values, except for lag 12 are within the threshold limits, indicating that the residuals are behaving like white noise.
+
+### Residuals plot from bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit %>% gg_tsresiduals()
+```
+From a first glance, it does not appear as if there is a difference from the residual plots from the bx_diff1_fit
+
+```{r}
+# (bx_diff1_fit) %>% 
+#   filter(.model == 'search') %>% 
+#   features(diff1, ljung_box, lag = 10, dof = 2)
+```
+
+failed attempt at a portmanteau test
+
+#### bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit <- bx_ts %>% model(stepwise = ARIMA(total_waste),
+                                      arima100 = ARIMA(total_waste ~ pdq(1,0,0)),
+                                      arima300 = ARIMA(total_waste~ pdq(3,0,0)),
+                                      search = ARIMA(total_waste, stepwise = FALSE),
+                                      )
+```
+
+```{r}
+glance(bx_total_waste_fit) %>% 
+  arrange(AICc) %>% 
+  select(.model:BIC)
+```
+
+### Report of ARIMA100 & ARIMA300
+
+```{r}
+# report(bx_total_waste_fit) %>% filter(model == arima300)
+bx_total_waste_fit %>% select(.model = arima100) %>% report()
+print("---")
+bx_total_waste_fit %>% select(.model = arima300) %>% report()
+print("---")
+bx_total_waste_fit %>% select(.model = search) %>% report()
+```
+
+### Preliminary forecast of bx_total_waste_fit
+
+```{r}
+bx_total_waste_fit %>% 
+  forecast(h = 8) %>% 
+  autoplot(bx_ts, level = NULL)
+```
+
+After spending a lot of time researching how to return the point forecasts of the search model from above, I believe the point_forecast parameter needs to be passed. I am still unsure as to if the point forecasts returned below are the same point forecasts plotted above.
+
+```{r}
+bx_total_waste_fit %>% select(.model = search) %>% forecast(h = 8,point_forecast = list(.mean = mean))
+```
+
+#### Acuracy scores of this model
+
+```{r}
+accuracy(bx_total_waste_fit)
+```
+
+
+## bx_diff1_fit
+The models need to be passed through the model() function. We will update the bx_diff1_fit here.
+
+```{r}
+bx_diff1_fit <- bx_ts %>% 
+  model(arima200 = ARIMA(diff1 ~ pdq(2,0,0)),
+        stepwise = ARIMA(diff1),
+        search = ARIMA(diff1, stepwise = FALSE))
+```
+
+
+### Preliminary forecast of bx_diff1_fit
+
+We have a successful prelim forecast of the bx_diff1_fit
+
+```{r}
+bx_diff1_fit %>%
+  forecast(h = 6) %>%
+  # filter(.model == 'search') %>%
+  autoplot(bx_ts2)
+```
+
+```{r}
+fc <- bx_diff1_fit %>%
+  forecast(h = 6)
+fc
+```
+
+```{r}
+fc %>% hilo(level = c(80,95))
+```
+
+```{r}
+fc %>% autoplot(bx_ts)
+```
+
+
+```{r}
+glance(bx_diff1_fit) %>% 
+  arrange(AICc) %>% 
+  select(.model:BIC)
+```
+
+
+```{r}
+bx_diff1_fit %>% select(search) %>% gg_tsresiduals(lag = 6)
+```
+I am not quite sure which model this is. 
+
+In-sample training accuracy does not require extra data provided.
+
+```{r}
+accuracy(bx_diff1_fit)
+```
+
+```{r}
+# bx_diff1_fit %>% 
+#   accuracy(bx_ts$diff1,
+#           measures = list(interval_accuracy_measures, distribution_accuracy_measures))
+```
+
+## Creating the Bronx Training Set
+
+```{r}
+DSNY %>% filter(month >= as.Date("2021-01-01"))
+```
+
+
+[Introduction to fable](https://cran.r-project.org/web/packages/fable/vignettes/fable.html)
+
+## Getting US Holidays
+
+```{r}
+# holidays_dataset_2017 <- read.socrata(
+#   "https://date.nager.at/api/v3/publicholidays/2017/AT.json",
+#   # app_token = "YOURAPPTOKENHERE",
+#   # email     = "user@example.com",
+#   # password  = "fakepassword"
+# )
+```
+
+```{r}
+library(Holidays)
+# isHoliday(x = 20210421) #fail
+```
+```{r, hide = TRUE, show = FALSE, warning=FALSE}
+#install.packages("RQuantLib")
+library("RQuantLib")
+```
+
+```{r}
+?isBusinessDay
+```
+
+## Looking for Economic Data variables
+
+https://fred.stlouisfed.org/tags/series?t=monthly%3Bprice%20index%3Busa&ob=pv&od=desc
+https://fred.stlouisfed.org/series/UNRATE
+
+
