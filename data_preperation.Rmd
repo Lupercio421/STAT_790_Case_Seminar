@@ -669,15 +669,28 @@ bx_test = DSNY_test %>%
   summarise(., total_waste = sum(total_waste)) %>% 
   ungroup() # I added ungrouped at the end to avoid any potential errors in plots or manipulations later on
 ```
+```{r}
+bx_test <- DSNY_test %>% 
+  group_by(month, borough) %>%
+  filter(borough_id == 2) %>% 
+  summarise(., total_waste = sum(total_waste)) %>% 
+  ungroup() %>% 
+  mutate(month_num = row_number()) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
+```
+
+
 ### Now lets convert it to a tsibble
 
 ```{r}
-# bx_test_ts <- as_tsibble(bx_test, index = 'month', regular = FALSE)
-bx_test_ts <- bx_test_ts %>% 
-  mutate(month_num = row_number()) %>% #seq.int(nrow(.)) also works as well
-  update_tsibble(index = month_num, regular = TRUE) %>% 
-  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num)) %>% 
+bx_test_ts <- as_tsibble(bx_test, index = 'month_num', regular = TRUE) %>% 
   tsibble::fill_gaps()
+
+# bx_test %>% 
+#   mutate(month_num = row_number()) %>% #seq.int(nrow(.)) also works as well
+#   update_tsibble(index = month_num, regular = TRUE) %>% 
+#   mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num)) %>% 
+#   tsibble::fill_gaps()
 ```
 
 We will work with the index as 'month_num'
@@ -695,14 +708,51 @@ bx_test_ts %>%
 bx_test_ts %>% ACF(total_waste) %>% autoplot()
 ```
 
+I am attempting to create ARIMA models using the BX total waste values from the test set
+
 ```{r}
-bx_total_waste_fit %>%
+bx_test_total_waste_fit <- bx_test_ts %>% 
+  model(arima200 = ARIMA(total_waste ~ pdq(2,0,0)),
+        arima100 = ARIMA(total_waste ~ pdq(1,0,0)),
+        arima110 = ARIMA(total_waste ~ pdq(1,1,0)),
+        stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste, stepwise = FALSE))
+```
+
+Return the accuracy metrics for the models fitted onto the BX total waste test set
+
+```{r}
+bx_test_total_waste_fit %>% accuracy()
+```
+
+Return the coefficients of the models from above
+
+```{r}
+bx_test_total_waste_fit %>% select(.model = arima100) %>% report()
+print("---")
+bx_test_total_waste_fit %>% select(.model = arima200) %>% report()
+print("---")
+bx_test_total_waste_fit %>% select(.model = arima110) %>% report()
+print("---")
+bx_test_total_waste_fit %>% select(.model = search) %>% report()
+```
+
+
+```{r}
+bx_test_total_waste_fit %>%
   forecast(h = 8) %>%
   autoplot(bx_test_ts, level = NULL)
 ```
-As we can see, we can not use the model fitted on the training set, onto the test set. I believe we will need to create a new model, using the parameters from the training models. 
+The new model, using the parameters from the training models was created. Not enough testing data is used. We can see that the averaged total_waste values are beginning to stabilize right after the 16th month forecast. 
 
 [Introduction to fable](https://cran.r-project.org/web/packages/fable/vignettes/fable.html)
+
+```{r}
+bx_test_ts %>% 
+  stretch_tsibble(.init = 2, .step = 1) %>% 
+  count(., .id)
+```
+
 
 ## Getting US Holidays
 
@@ -729,8 +779,25 @@ library("RQuantLib")
 ```
 
 ## Looking for Economic Data variables
-
 https://fred.stlouisfed.org/tags/series?t=monthly%3Bprice%20index%3Busa&ob=pv&od=desc
+
+### Consumer Price Index
+
+When using the CPI, please note that it is not applicable to all consumers and should not be used to determine relative living costs. Additionally, the CPI is a statistical measure vulnerable to sampling error since it is based on a sample of prices and not the complete average.
+
+```{r}
+unemp_rate <- read.csv("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/external_datasets/unemployment_rate_seasonally_adjusted.csv", header = T)
+```
+
+### Unemployment Rate
 https://fred.stlouisfed.org/series/UNRATE
 
+```{r}
+cons_price_index <- read.csv("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/external_datasets/consumer_price_index_seasonally_adjusted.csv", header = T)
+```
+
+The unemployment rate represents the number of unemployed as a percentage of the labor force. Labor force data are restricted to people 16 years of age and older, who currently reside in 1 of the 50 states or the District of Columbia, who do not reside in institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces.
+
+```{r}
+```
 
