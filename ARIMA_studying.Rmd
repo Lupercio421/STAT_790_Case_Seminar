@@ -1,0 +1,54 @@
+---
+title: "ARIMA Studying"
+author: "DL"
+date: "3/15/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# [Article](https://people.duke.edu/~rnau/411arim2.htm)
+
+## Identifying the order of differencing in an ARIMA model
+
+* Rule 1: If the series has positive autocorrelations out to a high number of lags, then it probably needs a higher order of differencing.
+* Rule 2: If the lag-1 autocorrelation is zero or negative, or the autocorrelations are all small and patternless, then the series does not need a higher order of differencing. If the lag-1 autocorrelation is -0.5 or more negative, the series may be overdifferenced.  BEWARE OF OVERDIFFERENCING!!
+* Rule 3: The optimal order of differencing is often the order of differencing at which the standard deviation is lowest.
+* Rule 4: A model with no orders of differencing assumes that the original series is stationary (mean-reverting). A model with one order of differencing assumes that the original series has a constant average trend (e.g. a random walk or SES-type model, with or without growth). A model with two orders of total differencing assumes that the original series has a time-varying trend (e.g. a random trend or LES-type model).
+* Rule 5: A model with no orders of differencing normally includes a constant term (which allows for a non-zero mean value). A model with two orders of total differencing normally does not include a constant term. In a model with one order of total differencing, a constant term should be included if the series has a non-zero average trend.
+
+## Identifying the numbers of AR or MA terms in an ARIMA model
+By looking at the autocorrelation function (ACF) and partial autocorrelation (PACF) plots of the differenced series, you can tentatively identify the numbers of AR and/or MA terms that are needed. You are already familiar with the ACF plot: it is merely a bar chart of the coefficients of correlation between a time series and lags of itself. The PACF plot is a plot of the partial correlation coefficients between the series and lags of itself.
+In general, the "partial" correlation between two variables is the amount of correlation between them which is not explained by their mutual correlations with a specified set of other variables. A partial autocorrelation is the amount of correlation between a variable and a lag of itself that is not explained by correlations at all lower-order-lags. <br>
+
+$\textbf{AR and MA signatures}$: If the PACF displays a sharp cutoff while the ACF decays more slowly (i.e., has significant spikes at higher lags), we say that the stationarized series displays an "AR signature," meaning that the autocorrelation pattern can be explained more easily by adding AR terms than by adding MA terms.
+
+
+* Rule 6: If the PACF of the differenced series displays a sharp cutoff and/or the lag-1 autocorrelation is positive--i.e., if the series appears slightly "underdifferenced"--then consider adding an AR term to the model. The lag at which the PACF cuts off is the indicated number of AR terms.
+
+An MA signature is commonly associated with negative autocorrelation at lag 1--i.e., it tends to arise in series which are slightly overdifferenced. The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation. <br>
+
+* Rule 7: If the ACF of the differenced series displays a sharp cutoff and/or the lag-1 autocorrelation is negative--i.e., if the series appears slightly "overdifferenced"--then consider adding an MA term to the model. The lag at which the ACF cuts off is the indicated number of MA terms.
+* Rule 8: It is possible for an AR term and an MA term to cancel each other's effects, so if a mixed AR-MA model seems to fit the data, also try a model with one fewer AR term and one fewer MA term--particularly if the parameter estimates in the original model require more than 10 iterations to converge.
+* Rule 9: If there is a unit root in the AR part of the model--i.e., if the sum of the AR coefficients is almost exactly 1--you should reduce the number of AR terms by one and increase the order of differencing by one.
+* Rule 10: If there is a unit root in the MA part of the model--i.e., if the sum of the MA coefficients is almost exactly 1--you should reduce the number of MA terms by one and reduce the order of differencing by one.
+* Rule 11: If the long-term forecasts appear erratic or unstable, there may be a unit root in the AR or MA coefficients.
+
+## Estimation of ARIMA models
+
+### Linear versus nonlinear least squares
+
+ARIMA models which include only AR terms are special cases of linear regression models, hence they can be fitted by ordinary least squares.
+
+* AR forecasts are a linear function of the coefficients as well as a linear function of past data.
+
+### "Mean" versus "constant"
+
+The "mean" and the "constant" in ARIMA model-fitting results are different numbers whenever the model includes AR terms. Suppose that you fit an ARIMA model to Y in which p is the number of autoregressive terms. (Assume for convenience that there are no MA terms.)
+
+$\text{Constant} = \text{Mean}*{1-\text{sum of AR coefficients}}$ <br>
+$\text{Mean} = \text{Constant}\div{1-\text{sum of AR coefficients}}$
+
+
