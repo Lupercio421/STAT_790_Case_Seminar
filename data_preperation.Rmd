@@ -286,9 +286,8 @@ bx_ts %>% ACF(total_waste, lag_max = 3)
 ```
 
 ```{r}
-feasts::unitroot_ndiffs(bx_ts$total_waste, alpha = 0.05, differences = 0:2, unitroot_fn = ~unitroot_kpss(.)["kpss_pvalue"])
+feasts::unitroot_ndiffs(bx_ts$total_waste, alpha = 0.05, differences = 0:2, unitroot_fn = ~ unitroot_kpss(.)["kpss_pvalue"])
 ```
-
 
 ```{r}
 bx_ts %>% 
@@ -301,6 +300,13 @@ In this ACF plot, we see that $r_{12}$ is higher than all the other lags. This c
 ```{r}
 bx_ts %>% features(total_waste, feat_acf)
 ```
+
+```{r}
+bx_ts %>% 
+  PACF(total_waste, lag_max = 24) %>% 
+  autoplot()
+```
+
 
 ## Getting total waste, by community district, per month
 
@@ -374,7 +380,7 @@ bx_ts <- bx_ts %>%
 ## ACF for total_waste
 
 ```{r}
-bx_ts %>% ACF(total_waste) %>% autoplot()
+bx_ts %>% ACF(total_waste, lag_max = 36) %>% autoplot()
 ```
 
 
@@ -553,7 +559,7 @@ glance(bx_total_waste_fit) %>%
   select(.model:BIC)
 ```
 
-### Report of ARIMA100 & ARIMA300
+### Report of ARIMA100 & ARIMA300 & stepwise model (ARIMA(0,0,3))
 
 ```{r}
 # report(bx_total_waste_fit) %>% filter(model == arima300)
@@ -561,15 +567,17 @@ bx_total_waste_fit %>% select(.model = arima100) %>% report()
 print("---")
 bx_total_waste_fit %>% select(.model = arima300) %>% report()
 print("---")
-bx_total_waste_fit %>% select(.model = search) %>% report()
+bx_total_waste_fit %>% select(.model = stepwise) %>% report()
 ```
+$$y_t = $$
 
 ### Preliminary forecast of bx_total_waste_fit
 
 ```{r}
 bx_total_waste_fit %>% 
   forecast(h = 8) %>% 
-  autoplot(bx_ts, level = NULL)
+  autoplot(bx_ts) + labs(x = "Month Number",
+                         y = "Total Waste")
 ```
 
 After spending a lot of time researching how to return the point forecasts of the search model from above, I believe the point_forecast parameter needs to be passed. I am still unsure as to if the point forecasts returned below are the same point forecasts plotted above.
@@ -583,7 +591,31 @@ bx_total_waste_fit %>% select(.model = search) %>% forecast(h = 8,point_forecast
 ```{r}
 accuracy(bx_total_waste_fit)
 ```
+## Attempt at a seasonal model
 
+```{r}
+bx_total_waste_fit_seasonal <- bx_ts %>% 
+  model(arima003 = ARIMA(total_waste ~ pdq(0,0,3)), # This model has a constant and the Seasonal MA(1) component is not included 
+        arima003s = ARIMA(total_waste ~ 1+ pdq(0,0,3) + PDQ(0,0,1)), # This model has a constant and the Seasonal MA(1) component is included 
+        arima003s12 = ARIMA(total_waste ~ 1+ pdq(0,0,3) + PDQ(0,0,12)), # This model has a constant and the Seasonal MA(12) component is included. 12 for the number of months
+        stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste, stepwise = FALSE, approximation = FALSE))
+```
+
+#### accuracy scores of this seasonal model
+
+```{r}
+accuracy(bx_total_waste_fit_seasonal)
+```
+```{r}
+bx_total_waste_fit_seasonal %>% select(.model = search) %>% report()
+print("---")
+bx_total_waste_fit_seasonal %>% select(.model = arima003s) %>% report()
+print("---")
+bx_total_waste_fit_seasonal %>% select(.model = arima003s12) %>% report()
+```
+
+My attempt at adding a seasonal component returned the same model as the ARIMA(0,0,3), in terms of coefficients and accuracy scores. Not sure why that is. 
 
 ## bx_diff1_fit
 The models need to be passed through the model() function. We will update the bx_diff1_fit here.
@@ -593,8 +625,17 @@ bx_diff1_fit <- bx_ts %>%
   model(arima200 = ARIMA(diff1 ~ pdq(2,0,0)),
         stepwise = ARIMA(diff1),
         search = ARIMA(diff1, stepwise = FALSE))
+
+accuracy(bx_diff1_fit)
 ```
 
+```{r}
+bx_diff1_fit %>% select(.model = arima200) %>% report()
+print("---")
+bx_diff1_fit %>% select(.model = stepwise) %>% report()
+print("---")
+bx_diff1_fit %>% select(.model = search) %>% report()
+```
 
 ### Preliminary forecast of bx_diff1_fit
 
@@ -657,7 +698,6 @@ DSNY_test <- DSNY %>% filter(month >= as.Date("2021-01-01"))
 # DSNY %>% mutate(total_waste = select(., 4:6) %>%  rowSums(na.rm = TRUE))
 ```
 
-
 ## Goal: Run the fitted ARIMA models on the test set of BX values
 
 ### Let's filter out the Bronx values and 
@@ -712,11 +752,11 @@ I am attempting to create ARIMA models using the BX total waste values from the 
 
 ```{r}
 bx_test_total_waste_fit <- bx_test_ts %>% 
-  model(arima200 = ARIMA(total_waste ~ pdq(2,0,0)),
+  model(arima003 = ARIMA(total_waste ~ 1 + pdq(0,0,3) + PDQ(0,0,0)), # This model has a constant and the Seasonal MA(1) component is not included 
         arima100 = ARIMA(total_waste ~ pdq(1,0,0)),
         arima110 = ARIMA(total_waste ~ pdq(1,1,0)),
         stepwise = ARIMA(total_waste),
-        search = ARIMA(total_waste, stepwise = FALSE))
+        search = ARIMA(total_waste, stepwise = FALSE, approximation = FALSE))
 ```
 
 Return the accuracy metrics for the models fitted onto the BX total waste test set
@@ -728,20 +768,21 @@ bx_test_total_waste_fit %>% accuracy()
 Return the coefficients of the models from above
 
 ```{r}
-bx_test_total_waste_fit %>% select(.model = arima100) %>% report()
+bx_test_total_waste_fit %>% select(.model = arima003) %>% report()
 print("---")
-bx_test_total_waste_fit %>% select(.model = arima200) %>% report()
+bx_test_total_waste_fit %>% select(.model = arima100) %>% report()
 print("---")
 bx_test_total_waste_fit %>% select(.model = arima110) %>% report()
 print("---")
-bx_test_total_waste_fit %>% select(.model = search) %>% report()
+bx_test_total_waste_fit %>% select(.model = stepwise) %>% report()
 ```
 
 
 ```{r}
 bx_test_total_waste_fit %>%
   forecast(h = 8) %>%
-  autoplot(bx_test_ts, level = NULL)
+  autoplot(bx_test_ts, level = NULL) + labs(x = "Month Number",
+                                              y = "Total Waste")
 ```
 The new model, using the parameters from the training models was created. Not enough testing data is used. We can see that the averaged total_waste values are beginning to stabilize right after the 16th month forecast. 
 
