@@ -597,7 +597,8 @@ accuracy(bx_total_waste_fit)
 bx_total_waste_fit_seasonal <- bx_ts %>% 
   model(arima003 = ARIMA(total_waste ~ pdq(0,0,3)), # This model has a constant and the Seasonal MA(1) component is not included 
         arima003s = ARIMA(total_waste ~ 1+ pdq(0,0,3) + PDQ(0,0,1)), # This model has a constant and the Seasonal MA(1) component is included 
-        arima003s12 = ARIMA(total_waste ~ 1+ pdq(0,0,3) + PDQ(0,0,12)), # This model has a constant and the Seasonal MA(12) component is included. 12 for the number of months
+        arima003s12 = ARIMA(total_waste ~ 1+ pdq(0,0,3) + PDQ(0,0,12)),
+        arima003s12_no_mean = ARIMA(total_waste ~ pdq(0,0,3) + PDQ(0,0,12)), # This model has a constant and the Seasonal MA(12) component is included. 12 for the number of months
         stepwise = ARIMA(total_waste),
         search = ARIMA(total_waste, stepwise = FALSE, approximation = FALSE))
 ```
@@ -613,6 +614,8 @@ print("---")
 bx_total_waste_fit_seasonal %>% select(.model = arima003s) %>% report()
 print("---")
 bx_total_waste_fit_seasonal %>% select(.model = arima003s12) %>% report()
+print("---")
+bx_total_waste_fit_seasonal %>% select(.model = arima003s12_no_mean) %>% report()
 ```
 
 My attempt at adding a seasonal component returned the same model as the ARIMA(0,0,3), in terms of coefficients and accuracy scores. Not sure why that is. 
@@ -794,7 +797,6 @@ bx_test_ts %>%
   count(., .id)
 ```
 
-
 ## Getting US Holidays
 
 ```{r}
@@ -810,6 +812,7 @@ bx_test_ts %>%
 library(Holidays)
 # isHoliday(x = 20210421) #fail
 ```
+
 ```{r, hide = TRUE, show = FALSE, warning=FALSE}
 #install.packages("RQuantLib")
 library("RQuantLib")
