@@ -1,0 +1,98 @@
+---
+title: "Meeting 6 Notes"
+author: "DL"
+date: "3/18/2022"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+```
+
+
+## For next meeting:
+
+```{r}
+load("BX_ts.RData")
+```
+
+### ARIMA(0,0,0) with constant
+
+```{r ARIMA model fitting}
+bx_arima000_fit <- bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0)))
+```
+
+```{r acf and resduals plot}
+bx_arima000_fit%>% gg_tsresiduals(lag = 24)
+```
+
+```{r PACF and ACF plot}
+bx_ts %>% gg_tsdisplay(total_waste, plot_type = "partial")
+```
+From the ACF, we see significant lag spikes at lags (1,2, 3, 11, 12). <br>
+
+From the PACF, we see significant lag spikes at lags (1, 2, 11, 12 and 13). The first instance where the PACF "cuts off" is at lag 3. Although the lag 1 of the PACF is not close to 1, it is unclear if differencing is needed. 
+
+```{r}
+# tsibbledata::aus_production %>%
+#   model(ETS(Beer)) %>%
+#   gg_tsresiduals()
+```
+```{r}
+# bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0))) %>% gg_tsresiduals(plot_type = c("auto", "partial"))
+```
+
+```{r accuracy score}
+accuracy(bx_arima000_fit)
+```
+
+### ARIMA(0,1,0) with constant
+
+```{r ARIMA010 fit}
+bx_arima010_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
+```
+
+```{r ACF plot}
+bx_arima010_fit%>% gg_tsresiduals(lag = 24)
+```
+From the ACF, we see significant values at lag (1, 13), and positive significant values at lag (12). A "sharp cutoff" is subjective here. Lags 2 and 3 are small, but then the ACF values picks up again on lag 4. 
+
+```{r PACF Plot}
+bx_ts %>% gg_tsdisplay(diff1, plot_type = "partial")
+```
+
+The PACF displays significant lag values at lags (1, 2,4, 10, 11). <br>
+
+From the DUKE Arima study [guide](https://people.duke.edu/~rnau/411arim3.htm), "An MA signature is commonly associated with negative autocorrelation at lag 1--i.e., it tends to arise in series which are slightly overdifferenced. The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation."
+
+#### For now, I will skip the attemps at adding AR() parameters
+
+## ARIMA(0,1,1) w/0 constant - Simple Exponential Smoothing
+
+```{r ARIMA(0,1,1) no constant}
+bx_arima011_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ pdq(0,1,1)))
+```
+
+```{r ACF plot}
+bx_arima011_fit %>% gg_tsresiduals(lag = 24)
+```
+The ACF values are significant and positive at lags (1,12). They are significant and negative at lags (4, 8)
+
+```{r coefficients}
+bx_arima011_fit %>% report()
+```
+Our only MA parameter is approximately 0.82. Which is not bad, as long as it does not approximate 1. 
+
+```{r forecast plot}
+bx_arima011_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+I am not really liking the forecast values. They appear to stabilize very quickly. 
+
+
+* Follow along the Units example
+  + Show every step
