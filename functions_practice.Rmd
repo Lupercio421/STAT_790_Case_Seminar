@@ -198,4 +198,35 @@ Do we return False if they are not the same length?
 
 ```
 
+#### 6. Create a function what will return TRUE if a given integer is inside a vector.
+
+```{r}
+f_exists <- function(v,x, na.rm = TRUE){ #v is the vector and x is the integer to check
+  exist <- FALSE
+  i <- 1 #begin the cursor at 1
+  while (i <= length(v) & !exist){ #while loop that goes through each element and !exist is TRUE
+    if (v[i] == x){ #element wise checking
+      exist <- TRUE #exist is switched to TRUE
+    }
+  i <- i + 1
+  }
+  return (exist)
+}
+
+f_exists(c(33,12,22), 11)
+```
+
+#### 7. Create a function that given a data frame will print by screen the name of the column and the class of data it contains (e.g. Variable1 is Numeric).
+
+```{r}
+#we need a df parameter, 
+f_class <- function(df){
+  # a for loop through each column of the df
+  for (i in 1:ncol(df)){
+    # concatenate the name of the column, with its class type
+    cat(names(df)[i], "is", class(df[,i]), "\n")
+  }
+}
+f_class(cars)
+```
 
