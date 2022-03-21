@@ -30,6 +30,7 @@ bx_arima000_fit <- bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + p
 ```{r acf and resduals plot}
 bx_arima000_fit%>% gg_tsresiduals(lag = 24)
 ```
+We can only see the PACF of the time series (tsibble), not of the model.  
 
 ```{r PACF and ACF plot}
 bx_ts %>% gg_tsdisplay(total_waste, plot_type = "partial")
@@ -43,6 +44,7 @@ From the PACF, we see significant lag spikes at lags (1, 2, 11, 12 and 13). The 
 #   model(ETS(Beer)) %>%
 #   gg_tsresiduals()
 ```
+
 ```{r}
 # bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0))) %>% gg_tsresiduals(plot_type = c("auto", "partial"))
 ```
@@ -51,7 +53,27 @@ From the PACF, we see significant lag spikes at lags (1, 2, 11, 12 and 13). The 
 accuracy(bx_arima000_fit)
 ```
 
-### ARIMA(0,1,0) with constant
+## ARIMA(1,0,0) with no constant
+
+```{r ARMA(1,0) fit}
+bx_arima100_fit <- bx_ts %>% model(arima100_constant = ARIMA(total_waste ~  pdq(1,0,0)))
+bx_arima100_fit %>% gg_tsresiduals(lag = 24)
+```
+
+From here we can see that lag 1 of the PACF is negative. Lag 2 is barely significant, but lags 12 and 24 surpass the significant threshold. Fitting an AR(1) model which will turn out to be equivalent to taking a first difference
+
+#### Lets test this statement out. 
+
+## ARIMA(0,1,0) with no constant
+
+```{r Difference Arima with no constant & ACF plot}
+bx_arima010_fit_no_constant <- bx_ts %>% model(arima010_no_constant = ARIMA(total_waste ~ pdq(0,1,0)))
+bx_arima010_fit_no_constant %>% gg_tsresiduals(lag = 24)
+```
+
+As it turns out, the ARIMA(1,0,0) and ARIMA(0,1,0) do not return the same ACF plots. The ACF at lag 1 of the ARIMA(0,1,0) is negative. 
+
+## ARIMA(0,1,0) with constant
 
 ```{r ARIMA010 fit}
 bx_arima010_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
@@ -70,17 +92,35 @@ The PACF displays significant lag values at lags (1, 2,4, 10, 11). <br>
 
 From the DUKE Arima study [guide](https://people.duke.edu/~rnau/411arim3.htm), "An MA signature is commonly associated with negative autocorrelation at lag 1--i.e., it tends to arise in series which are slightly overdifferenced. The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation."
 
-#### For now, I will skip the attemps at adding AR() parameters
+#### For now, I will skip the attemps at adding AR() parameters, as I will focus on getting the ACF values close to zero with MA() parameters
 
-## ARIMA(0,1,1) w/0 constant - Simple Exponential Smoothing
+## ARIMA(0,0,1) with out a constant
 
-```{r ARIMA(0,1,1) no constant}
-bx_arima011_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ pdq(0,1,1)))
+```{r ARIMA(001) no constant}
+bx_arima001_fit <- bx_ts %>% model(arima001 = ARIMA(total_waste ~ pdq(0,0,1)))
+bx_arima001_fit %>% gg_tsresiduals(lag = 24)
 ```
 
-```{r ACF plot}
+We see that the first ACF value is not significant and is positive. Lags(2, 12, 24) are significant. There appears to be a seasonal component, as evident from lags 12 and 24. 
+
+```{r forecast}
+bx_arima001_fit %>% forecast(h = 8) #the estimates immediately stabilizes
+bx_arima001_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+
+```{r coefficients}
+bx_arima001_fit %>% report()
+```
+
+The MA(1) parameter here is 0.28. Far from 1. 
+
+## ARIMA(0,1,1) with out a constant - Simple Exponential Smoothing
+
+```{r ARIMA(0) & no constant, ACF plot}
+bx_arima011_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ pdq(0,1,1)))
 bx_arima011_fit %>% gg_tsresiduals(lag = 24)
 ```
+
 The ACF values are significant and positive at lags (1,12). They are significant and negative at lags (4, 8)
 
 ```{r coefficients}
@@ -92,6 +132,32 @@ Our only MA parameter is approximately 0.82. Which is not bad, as long as it doe
 bx_arima011_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
 ```
 I am not really liking the forecast values. They appear to stabilize very quickly. 
+
+## ARIMA(0,1,2) with out a constant 
+
+```{r ARIMA(0,1,2) no constant & residuals plot}
+bx_arima012_fit <- bx_ts %>% model(arima012 = ARIMA(total_waste ~ pdq(0,1,2)))
+bx_arima012_fit %>% gg_tsresiduals(lag = 24)
+```
+From the ACF plot, we can see that the first significant lag begins at lag 12. The lags (2, 4, 8) barely pass the significance threshold. 
+
+```{r forecast plot}
+bx_arima012_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+
+If i ever need to difference the data again: 
+```{r}
+# bx_ts %>%
+#   mutate(diff2 = difference(total_waste, differences = 2, order_by = month_num)) %>%
+#   tsibble::fill_gaps()
+```
+
+## ARIMA(0,1,2) with a seasonal parameter
+
+```{r}
+bx_arima012_seasonal <- bx_ts %>% model(arima012_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,12)))
+bx_arima012_seasonal %>% gg_tsresiduals(lag = 36)
+```
 
 
 * Follow along the Units example
