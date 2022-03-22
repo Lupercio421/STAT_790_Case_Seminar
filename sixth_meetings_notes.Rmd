@@ -152,13 +152,27 @@ If i ever need to difference the data again:
 #   tsibble::fill_gaps()
 ```
 
-## ARIMA(0,1,2) with a seasonal parameter
+## ARIMA(0,1,2) with a seasonal parameter and period = 12
 
-```{r}
-bx_arima012_seasonal <- bx_ts %>% model(arima012_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,12)))
+More [information](https://fable.tidyverts.org/reference/ARIMA.html) on the parameter selection. 
+
+```{r ARIMA fit}
+bx_arima012_seasonal <- bx_ts %>% model(arima012_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)))
 bx_arima012_seasonal %>% gg_tsresiduals(lag = 36)
+bx_arima012_seasonal %>% report()
 ```
 
+With a "1", order of the seasonal moving average (SMA) terms and a period of 12, we get all ACF values except for 24 to within the 95% intervals. 
+
+## ARIMA(0,1,2) with no seasonal parameter and period = 12
+
+```{r}
+bx_arima012_no_seasonal <- bx_ts %>% model(arima012_no_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,0, period = 12)))
+bx_arima012_no_seasonal %>% gg_tsresiduals(lag = 36)
+bx_arima012_no_seasonal %>% report()
+```
+
+The ACF values at lag 12 is significant. And the MA() arguments are equal to 0.86.
 
 * Follow along the Units example
   + Show every step
