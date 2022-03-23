@@ -108,7 +108,7 @@ bx_arima001_fit %>% forecast(h = 8) #the estimates immediately stabilizes
 bx_arima001_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
 ```
 
-```{r coefficients}
+```{r coefficients?}
 bx_arima001_fit %>% report()
 ```
 
@@ -123,12 +123,12 @@ bx_arima011_fit %>% gg_tsresiduals(lag = 24)
 
 The ACF values are significant and positive at lags (1,12). They are significant and negative at lags (4, 8)
 
-```{r coefficients}
+```{r coefficients2}
 bx_arima011_fit %>% report()
 ```
 Our only MA parameter is approximately 0.82. Which is not bad, as long as it does not approximate 1. 
 
-```{r forecast plot}
+```{r forecast plot1}
 bx_arima011_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
 ```
 I am not really liking the forecast values. They appear to stabilize very quickly. 
@@ -141,7 +141,7 @@ bx_arima012_fit %>% gg_tsresiduals(lag = 24)
 ```
 From the ACF plot, we can see that the first significant lag begins at lag 12. The lags (2, 4, 8) barely pass the significance threshold. 
 
-```{r forecast plot}
+```{r forecast plot2}
 bx_arima012_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
 ```
 
@@ -156,10 +156,11 @@ If i ever need to difference the data again:
 
 More [information](https://fable.tidyverts.org/reference/ARIMA.html) on the parameter selection. 
 
+#### This is the one I like the most
 ```{r ARIMA fit}
-bx_arima012_seasonal <- bx_ts %>% model(arima012_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)))
-bx_arima012_seasonal %>% gg_tsresiduals(lag = 36)
-bx_arima012_seasonal %>% report()
+bx_arima012_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)))
+bx_arima012_001_12 %>% gg_tsresiduals(lag = 36)
+bx_arima012_001_12 %>% report()
 ```
 
 With a "1", order of the seasonal moving average (SMA) terms and a period of 12, we get all ACF values except for 24 to within the 95% intervals. 
@@ -167,12 +168,67 @@ With a "1", order of the seasonal moving average (SMA) terms and a period of 12,
 ## ARIMA(0,1,2) with no seasonal parameter and period = 12
 
 ```{r}
-bx_arima012_no_seasonal <- bx_ts %>% model(arima012_no_seasonal = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,0, period = 12)))
-bx_arima012_no_seasonal %>% gg_tsresiduals(lag = 36)
-bx_arima012_no_seasonal %>% report()
+bx_arima012_000_12 <- bx_ts %>% model(bx_arima012_000_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,0, period = 12)))
+bx_arima012_000_12 %>% gg_tsresiduals(lag = 36)
+bx_arima012_000_12 %>% report()
 ```
 
-The ACF values at lag 12 is significant. And the MA() arguments are equal to 0.86.
+The ACF values at lag 12 is significant. And the MA() arguments add up to equal to 0.86. <br>
+
+Section [9.9](https://otexts.com/fpp3/seasonal-arima.html) of the fpp3 textbook makes a claim that "an $\text{ARIMA(0,0,0)(0,0,1)}_{12}$ model will show:
+* a spike at lag 12 in the ACF but no other significant spikes;
+* exponential decay in the seasonal lags of the PACF (i.e., at lags 12, 24, 36, …)." <br>
+
+```{r}
+bx_arima000_001_12 <- bx_ts %>% model(arima012_no_ma_seasonal = ARIMA(total_waste ~ pdq(0,0,0) + PDQ(0,0,1, period = 12))) 
+bx_arima000_001_12 %>% gg_tsresiduals(lag = 36)
+bx_arima000_001_12 %>% report()
+```
+
+In our data, we do not see this as the the first three lags return significant ACF values. Then again at lag 24. The SMA() parameter is approximately 0.47, with the constant approximating 41,335. <br>
+
+The authors make a similar claim with "an $\text{ARIMA(0,0,0)(1,0,0)}_{12}$ model will show:
+* exponential decay in the seasonal lags of the ACF;
+* a single significant spike at lag 12 in the PACF." <br>
+
+```{r}
+bx_arima000_100_12 <- bx_ts %>% model(arima012_no_ma_seasonal = ARIMA(total_waste ~ pdq(0,0,0) + PDQ(1,0,0, period = 12))) 
+bx_arima000_100_12 %>% gg_tsresiduals(lag = 36)
+bx_arima000_100_12 %>% report()
+```
+
+Again, the first three lags return significant ACF values, but there is exponential decay in the seasonal lags of the ACF. The SAR() parameter approximates 0.61, with the constant approximating 16188. 
+
+```{r}
+bx_ts %>% 
+  gg_tsdisplay(difference(total_waste, 12),
+               plot_type = "partial", lag = 36) +
+  labs(title = "Seasonally Differenced", y = "")
+```
+
+```{r}
+bx_ts %>% 
+  gg_tsdisplay(difference(total_waste, 12) %>% difference(),
+               plot_type = "partial", lag = 36) +
+  labs(title = "Double Differenced", y = "")
+```
+<br>
+
+#### This is my second favorite model, with no seasonal difference needed and most of the ACF values are not significant. 
+The significant spike at lag 1 in the ACF suggests a non-seasonal MA(1) component. The significant spike at lag 12 in the ACF suggests a seasonal MA(1) component.
+
+```{r}
+bx_arima011_001_12 <- bx_ts %>% model(bx_arima011_001_12 = ARIMA(total_waste ~ pdq(0,1,1) + PDQ(0,0,1, period = 12))) 
+bx_arima011_001_12 %>% gg_tsresiduals()
+bx_arima011_001_12 %>% report
+```
+
+```{r}
+# bx_ts %>% model(bx_arima000_001_12,
+#                 bx_arima012_001_12,
+#                 bx_arima011_001_12)
+```
+
 
 * Follow along the Units example
   + Show every step
