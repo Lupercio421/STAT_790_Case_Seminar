@@ -185,3 +185,16 @@ parallel_stop()
 spark_disconnect_all()
 ```
 
+# STAT 790 Attempt
+
+```{r}
+bx_ts %>% plot_time_series(month, total_waste)
+```
+
+```{r}
+bx_model_fit_arima_no_boost <- arima_reg() %>% 
+  set_engine(engine = "auto_arima") %>% 
+  fit(total_waste ~ month, data = bx_ts)
+
+```
+
