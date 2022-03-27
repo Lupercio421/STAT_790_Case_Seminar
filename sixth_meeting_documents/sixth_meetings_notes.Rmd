@@ -1,0 +1,283 @@
+---
+title: "Meeting 6 Notes"
+author: "DL"
+date: "3/18/2022"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+```
+
+
+## For next meeting:
+
+```{r}
+#get the correct path file
+#The use of "\\" is also welcomed
+load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
+```
+
+### ARIMA(0,0,0) with constant
+
+```{r ARIMA model fitting}
+bx_arima000_fit <- bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0)))
+```
+
+```{r acf and resduals plot}
+bx_arima000_fit%>% gg_tsresiduals(lag = 24)
+# bx_ts %>% bx_arima00_fit %>% gg_arma()
+```
+<br>
+We can only see the PACF of the time series (tsibble), not of the model.  
+
+```{r PACF and ACF plot}
+bx_ts %>% gg_tsdisplay(total_waste, plot_type = "partial")
+```
+<br>From the ACF, we see significant lag spikes at lags (1,2, 3, 11, 12). <br>
+
+From the PACF, we see significant lag spikes at lags (1, 2, 11, 12 and 13). The first instance where the PACF "cuts off" is at lag 3. Although the lag 1 of the PACF is not close to 1, it is unclear if differencing is needed. 
+
+We can get the individual PACF plots of the time series. However, the differenced values must be a field in the tsibble. The PACF() function does not provide a differencing parameter for the time series. 
+
+```{r}
+bx_ts %>% feasts::PACF(total_waste) %>% autoplot()
+bx_ts %>% feasts::PACF(diff1, lag_max = 36) %>% autoplot()
+```
+So it appears that we can not get the PACF of the models directly from the ARIMA model. 
+
+```{r}
+#bx_arima000_fit %>% feasts::PACF(total_waste)
+```
+ 
+#### My next goal is to see if there is a function that will return the PACF values of the ARIMA model, then store into a table to plot them further.
+ 
+```{r}
+# bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0))) %>% gg_tsresiduals(plot_type = c("auto", "partial"))
+```
+
+```{r accuracy score}
+accuracy(bx_arima000_fit)
+```
+
+## ARIMA(1,0,0) with no constant
+
+```{r ARMA(1,0) fit}
+bx_arima100_fit <- bx_ts %>% model(arima100_constant = ARIMA(total_waste ~  pdq(1,0,0)))
+bx_arima100_fit %>% gg_tsresiduals(lag = 24)
+```
+
+From here we can see that lag 1 of the PACF is negative. Lag 2 is barely significant, but lags 12 and 24 surpass the significant threshold. 
+
+```{r}
+bx_ts %>% model(arima200_constant = ARIMA(total_waste ~  1 + pdq(2,0,0))) %>% gg_tsdisplay(plot_type = "partial")
+```
+
+
+Fitting an AR(1) model which will turn out to be equivalent to taking a first difference
+
+#### Lets test this statement out. 
+
+## ARIMA(0,1,0) with no constant
+
+```{r Difference Arima with no constant & ACF plot}
+bx_arima010_fit_no_constant <- bx_ts %>% model(arima010_no_constant = ARIMA(total_waste ~ pdq(0,1,0)))
+bx_arima010_fit_no_constant %>% gg_tsresiduals(lag = 24)
+```
+
+As it turns out, the ARIMA(1,0,0) and ARIMA(0,1,0) do not return the same ACF plots. The ACF at lag 1 of the ARIMA(0,1,0) is negative. 
+
+## ARIMA(0,1,0) with constant
+
+```{r ARIMA010 fit}
+bx_arima010_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
+```
+
+```{r ACF plot}
+bx_arima010_fit%>% gg_tsresiduals(lag = 24)
+```
+
+From the ACF, we see significant values at lag (1, 13), and positive significant values at lag (12). A "sharp cutoff" is subjective here. Lags 2 and 3 are small, but then the ACF values picks up again on lag 4. 
+
+```{r PACF Plot}
+bx_ts %>% gg_tsdisplay(diff1, plot_type = "partial")
+```
+
+The PACF displays significant lag values at lags (1, 2,4, 10, 11). <br>
+
+From the DUKE Arima study [guide](https://people.duke.edu/~rnau/411arim3.htm), "An MA signature is commonly associated with negative autocorrelation at lag 1--i.e., it tends to arise in series which are slightly overdifferenced. The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation."
+
+#### For now, I will skip the attemps at adding AR() parameters, as I will focus on getting the ACF values close to zero with MA() parameters
+
+## ARIMA(0,0,1) with out a constant
+
+```{r ARIMA(001) no constant}
+bx_arima001_fit <- bx_ts %>% model(arima001 = ARIMA(total_waste ~ pdq(0,0,1)))
+bx_arima001_fit %>% gg_tsresiduals(lag = 24)
+```
+
+We see that the first ACF value is not significant and is positive. Lags(2, 12, 24) are significant. There appears to be a seasonal component, as evident from lags 12 and 24. 
+
+```{r forecast}
+bx_arima001_fit %>% forecast(h = 8) #the estimates immediately stabilizes
+bx_arima001_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+
+```{r coefficients?}
+bx_arima001_fit %>% report()
+```
+
+The MA(1) parameter here is 0.28. Far from 1. 
+
+## ARIMA(0,1,1) with out a constant - Simple Exponential Smoothing
+
+```{r ARIMA(0) & no constant, ACF plot}
+bx_arima011_fit <- bx_ts %>% model(arima010_constant = ARIMA(total_waste ~ pdq(0,1,1)))
+bx_arima011_fit %>% gg_tsresiduals(lag = 24)
+```
+
+The ACF values are significant and positive at lags (1,12). They are significant and negative at lags (4, 8)
+
+```{r coefficients2}
+bx_arima011_fit %>% report()
+```
+Our only MA parameter is approximately 0.82. Which is not bad, as long as it does not approximate 1. 
+
+```{r forecast plot1}
+bx_arima011_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+<br>
+I am not really liking the forecast values. They appear to stabilize very quickly. 
+
+## ARIMA(0,1,2) with out a constant 
+
+```{r ARIMA(0,1,2) no constant & residuals plot}
+bx_arima012_fit <- bx_ts %>% model(arima012 = ARIMA(total_waste ~ pdq(0,1,2)))
+bx_arima012_fit %>% gg_tsresiduals(lag = 24)
+```
+
+From the ACF plot, we can see that the first significant lag begins at lag 12. The lags (2, 4, 8) barely pass the significance threshold. 
+
+```{r forecast plot2}
+bx_arima012_fit %>% forecast(h = 8) %>% autoplot(bx_ts)
+```
+
+If i ever need to difference the data again: 
+```{r}
+# bx_ts %>%
+#   mutate(diff2 = difference(total_waste, differences = 2, order_by = month_num)) %>%
+#   tsibble::fill_gaps()
+```
+
+## ARIMA(0,1,2) with a seasonal parameter and period = 12
+
+More [information](https://fable.tidyverts.org/reference/ARIMA.html) on the parameter selection. 
+
+### This is the one I like the most
+```{r ARIMA fit}
+bx_arima012_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)))
+bx_arima012_001_12 %>% gg_tsresiduals(lag = 36)
+bx_arima012_001_12 %>% report()
+```
+
+With a "1", order of the seasonal moving average (SMA) terms and a period of 12, we get all ACF values except for 24 to within the 95% intervals. 
+
+## ARIMA(0,1,2) with no seasonal parameter and period = 12
+
+```{r}
+bx_arima012_000_12 <- bx_ts %>% model(bx_arima012_000_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,0, period = 12)))
+bx_arima012_000_12 %>% gg_tsresiduals(lag = 36)
+bx_arima012_000_12 %>% report()
+```
+
+The ACF values at lag 12 is significant. And the MA() arguments add up to equal to 0.86. <br>
+
+Section [9.9](https://otexts.com/fpp3/seasonal-arima.html) of the fpp3 textbook makes a claim that "an $\text{ARIMA(0,0,0)(0,0,1)}_{12}$ model will show:
+* a spike at lag 12 in the ACF but no other significant spikes;
+* exponential decay in the seasonal lags of the PACF (i.e., at lags 12, 24, 36, …)." <br>
+
+```{r}
+bx_arima000_001_12 <- bx_ts %>% model(arima012_no_ma_seasonal = ARIMA(total_waste ~ pdq(0,0,0) + PDQ(0,0,1, period = 12))) 
+bx_arima000_001_12 %>% gg_tsresiduals(lag = 36)
+bx_arima000_001_12 %>% report()
+```
+
+In our data, we do not see this as the the first three lags return significant ACF values. Then again at lag 24. The SMA() parameter is approximately 0.47, with the constant approximating 41,335. <br>
+
+The authors make a similar claim with "an $\text{ARIMA(0,0,0)(1,0,0)}_{12}$ model will show:
+* exponential decay in the seasonal lags of the ACF;
+* a single significant spike at lag 12 in the PACF." <br>
+
+```{r}
+bx_arima000_100_12 <- bx_ts %>% model(arima012_no_ma_seasonal = ARIMA(total_waste ~ pdq(0,0,0) + PDQ(1,0,0, period = 12))) 
+bx_arima000_100_12 %>% gg_tsresiduals(lag = 36)
+bx_arima000_100_12 %>% report()
+```
+
+Again, the first three lags return significant ACF values, but there is exponential decay in the seasonal lags of the ACF. The SAR() parameter approximates 0.61, with the constant approximating 16188. 
+
+```{r}
+bx_ts %>% 
+  gg_tsdisplay(difference(total_waste, 12),
+               plot_type = "partial", lag = 36) +
+  labs(title = "Seasonally Differenced", y = "")
+```
+
+```{r}
+bx_ts %>% 
+  gg_tsdisplay(difference(total_waste, 12) %>% difference(),
+               plot_type = "partial", lag = 36) +
+  labs(title = "Double Differenced", y = "")
+```
+<br>
+
+### This is my second favorite model, with no seasonal difference needed and most of the ACF values are not significant. 
+
+The significant spike at lag 1 in the ACF suggests a non-seasonal MA(1) component. The significant spike at lag 12 in the ACF suggests a seasonal MA(1) component.
+
+```{r}
+bx_arima011_001_12 <- bx_ts %>% model(bx_arima011_001_12 = ARIMA(total_waste ~ pdq(0,1,1) + PDQ(0,0,1, period = 12))) 
+bx_arima011_001_12 %>% gg_tsresiduals()
+bx_arima011_001_12 %>% report
+```
+
+ARIMA(total_waste ~ 1 + pdq(0,0,0))
+
+## Creating the final fitted model with 5 ARIMA models
+
+```{r}
+bx_arima_fit <- bx_ts %>% model(arma100 = ARIMA(total_waste ~ pdq(1,0,0)),
+                arima010 = ARIMA(total_waste ~ pdq(0,1,0)),
+                arima001 = ARIMA(total_waste ~ pdq(0,0,1)),
+                arima012_001_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)),
+                arima011_001_12 = ARIMA(total_waste ~ pdq(0,1,1) + PDQ(0,0,1, period = 12)))
+```
+
+### Forecast plot, along with accuracy metrics and model 
+
+```{r}
+bx_arima_fit %>% forecast(h = 8) %>% autoplot(bx_ts) + labs(x = "Month Number", 
+                                                            y = "Total Waste Tonnage")
+accuracy(bx_arima_fit) |> arrange("RMSE")
+
+glance(bx_arima_fit) %>% 
+  arrange(AICc) %>% 
+  select(.model:BIC)
+```
+
+### Individual forecast plot of the best performing models
+
+```{r}
+bx_arima_fit %>% select(.model = c(arima011_001_12, arima012_001_12)) %>% forecast(h = 8) %>% autoplot(bx_ts)
+# bx_arima_fit %>% filter(.model == arima011_001_12) %>% forecast(h = 8) %>% autoplot(bx_ts) + labs(x = "Month Number", y = "Total Waste Tonnage")
+```
+
+```{r}
+# saveRDS(file = "meeting_6_Rdata.rds")
+save.image(file = "meeting_6.RData")
+```

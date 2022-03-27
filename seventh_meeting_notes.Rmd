@@ -1,0 +1,22 @@
+---
+title: "Seventh meeting notes"
+author: "Daniel L."
+date: "3/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## For next meeting:
+- Step 1: Order of differencing
+  + TS plot of residuals from ARIMA(0,0,0) w/ constant in not exactly stationary -> d = 1
+  
+- Step 2: AR() or MA()
+1. Obtain residual from current model: ARIMA(0,1,0) w/ constant
+2. Plot PACF of the residual
+
+- Step 3: Seasonality()
+1. Look at the PACF to determine AR() or MA() terms
+

@@ -1,0 +1,52 @@
+---
+title: "BX ARIMA models with TimeTk"
+author: "Daniel L."
+date: "3/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo = FALSE, results='hide'}
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+library(timetk)
+```
+
+
+```{r}
+load("meeting_6.RData")
+```
+
+```{r}
+bx_ts2 %>% glimpse()
+```
+```{r plotly of bxts_2}
+bx_ts %>% plot_time_series((month), total_waste)
+```
+
+## bx_ts can't be a tsibble. It must be a tibble or data.frame. From the timetk::tk_tsfeatures documentation
+
+```{r}
+timetk::tk_tsfeatures(.data = bx_ts,
+  .date_var = month,
+  .value = total_waste)
+```
+
+```{r}
+bx_ts %>% timetk::tk_tsfeatures(
+  .date_var = month,
+  .value = total_waste,
+  .features = c("frequency", "stl_features", "entropy", "acf_features")
+  ) %>% 
+  glimpse(.) %>% ungroup()
+```
+
