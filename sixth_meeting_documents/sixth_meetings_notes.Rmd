@@ -49,7 +49,7 @@ We can get the individual PACF plots of the time series. However, the difference
 bx_ts %>% feasts::PACF(total_waste) %>% autoplot()
 bx_ts %>% feasts::PACF(diff1, lag_max = 36) %>% autoplot()
 ```
-So it appears that we can not get the PACF of the models directly from the ARIMA model. 
+So it appears that we can not get the PACF of the models directly from the ARIMA model..
 
 ```{r}
 #bx_arima000_fit %>% feasts::PACF(total_waste)
