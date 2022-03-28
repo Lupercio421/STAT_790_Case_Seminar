@@ -78,7 +78,6 @@ From here we can see that lag 1 of the PACF is negative. Lag 2 is barely signifi
 bx_ts %>% model(arima200_constant = ARIMA(total_waste ~  1 + pdq(2,0,0))) %>% gg_tsdisplay(plot_type = "partial")
 ```
 
-
 Fitting an AR(1) model which will turn out to be equivalent to taking a first difference
 
 #### Lets test this statement out. 
