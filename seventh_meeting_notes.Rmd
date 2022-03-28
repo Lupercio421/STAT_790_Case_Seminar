@@ -9,6 +9,19 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+library(timetk)
+library(modeltime)
+```
+
+
 ## For next meeting:
 - Step 1: Order of differencing
   + TS plot of residuals from ARIMA(0,0,0) w/ constant in not exactly stationary -> d = 1
@@ -19,4 +32,30 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - Step 3: Seasonality()
 1. Look at the PACF to determine AR() or MA() terms
+
+```{r}
+#The use of "\\" is also welcomed
+load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
+load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/sixth_meeting_documents/meeting_6.RDATA")
+#C:\Users\Daniel\Desktop\R\STAT_790\STAT_790_Case_Seminar\sixth_meeting_documents\meeting_6.RData
+```
+
+```{r PACF and ACF plot}
+bx_ts %>% feasts::PACF(total_waste) %>% autoplot()
+bx_ts %>% feasts::PACF(diff1, lag_max = 36) %>% autoplot()
+```
+
+```{r}
+```
+
+
+```{r}
+bx_ts %>% gg_tsdisplay(y = total_waste, plot_type = c("partial"), lag_max = 36)
+bx_arima000_fit %>% gg_tsresiduals(lag = 36)
+```
+
+
+```{r}
+bx_arima000_fit %>% report()
+```
 
