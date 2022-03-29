@@ -46,6 +46,7 @@ bx_ts %>% feasts::PACF(diff1, lag_max = 36) %>% autoplot()
 ```
 
 ```{r}
+dput(bx_ts, file = "bx_ts")
 ```
 
 

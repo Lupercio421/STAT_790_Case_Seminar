@@ -161,6 +161,10 @@ DSNY_third_bronx %>%
   summarise(., min = min(total_waste))
 ```
 
+```{r}
+#save(DSNY_train, DSNY_third, DSNY_third_bronx, file = "data_prep.Rdata")
+```
+
 #### tsibble
 
 I will use two methods of converting this Bronx dataset into a tsibble
@@ -170,6 +174,7 @@ Method 1:
 ```{r}
 bx_ts <- as_tsibble(DSNY_third_bronx, index = 'month', regular = FALSE)
 ```
+
 
 Method 2:
 
