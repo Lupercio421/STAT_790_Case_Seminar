@@ -37,6 +37,7 @@ library(modeltime)
 #The use of "\\" is also welcomed
 load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
 load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/sixth_meeting_documents/meeting_6.RDATA")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.Rdata")
 #C:\Users\Daniel\Desktop\R\STAT_790\STAT_790_Case_Seminar\sixth_meeting_documents\meeting_6.RData
 ```
 
@@ -54,9 +55,97 @@ dput(bx_ts, file = "bx_ts")
 bx_ts %>% gg_tsdisplay(y = total_waste, plot_type = c("partial"), lag_max = 36)
 bx_arima000_fit %>% gg_tsresiduals(lag = 36)
 ```
+```{r}
+# bx_ts %>% gg_tsdisplay(y = total_waste, plot_type = c("partial"), lag_max = 36) #plot the timeseries
+# bx_arima000_fit <- bx_ts %>% model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0))) #create the ARIMA model
+# bx_arima000_fit %>% gg_tsresiduals(lag = 36) #plot the residuals
+```
 
 
 ```{r}
 bx_arima000_fit %>% report()
 ```
+
+```{r}
+global_economy %>%
+  filter(Code == "CAF") %>%
+  gg_tsdisplay(difference(Exports), plot_type='partial', lag_max = 36)
+
+caf_fit <- global_economy %>%
+  filter(Code == "CAF") %>%
+  model(arima000 = ARIMA(Exports ~ pdq(0,0,0)),
+        arima210 = ARIMA(Exports ~ pdq(2,1,0)),
+        arima013 = ARIMA(Exports ~ pdq(0,1,3)),
+        stepwise = ARIMA(Exports),
+        search = ARIMA(Exports, stepwise=FALSE))
+
+caf_fit %>% select(.model = arima000) %>% gg_tsresiduals(lag = 36)
+caf_fit %>% select(.model = arima210) %>% gg_tsresiduals(lag = 36)
+```
+
+```{r}
+DSNY_third_bronx[,-1]
+```
+
+```{r arima000}
+library(zoo)
+DSNY_BX_zoo_ts <- ts(DSNY_third_bronx[,-1], start = as.yearmon(DSNY_third_bronx$month)[1], frequency = 12)
+
+zoo_arima000_fit <- arima(DSNY_BX_zoo_ts, order = c(0,0,0))
+#names(zoo_arima000_fit)
+res_arima000 <- zoo_arima000_fit$residuals
+pacf(res_arima000, lag.max = 36)
+```
+
+The lags are in decimal format. With the frequency defined as 12, does Lag 1.0 = 12, Lag 2.0 ?= 24, Lag 3.0 ?= 36. 
+
+```{r autoplot}
+autoplot(as.zoo(DSNY_BX_zoo_ts))
+```
+```{r arima010}
+zoo_arima010_fit <- arima(DSNY_BX_zoo_ts, order = c(0,1,0))
+res_arima010 <- zoo_arima010_fit$residuals
+acf(res_arima010, lag.max = 36)
+pacf(res_arima010, lag.max = 36)
+```
+
+
+```{r arima011}
+zoo_arima011_fit <- arima(DSNY_BX_zoo_ts, order = c(0,1,1))
+res_arima011 <- zoo_arima011_fit$residuals
+acf(res_arima011, lag.max = 36)
+pacf(res_arima011, lag.max = 36)
+```
+
+The lag one value of the ACF plot is 1.0 and positive. The lag 2 is also significant in the ACF(). With a seasonal patter of significant lags at each whole lag. I am have a feeling we should add an AR() argument, and there definitely should be a seasonal argument.
+
+```{r arima111}
+zoo_arima111_fit <- arima(DSNY_BX_zoo_ts, order = c(1,1,1))
+res_arima111 <- zoo_arima111_fit$residuals
+acf(res_arima111, lag.max = 36)
+pacf(res_arima111, lag.max = 36)
+```
+
+We can see that in the ACF(), the seasonal lags are not being contained within the range. The PACF() is showing promising signs
+
+```{r arima012}
+#no constant will be used here
+zoo_arima012_fit <- arima(DSNY_BX_zoo_ts, order = c(0,1,2))
+res_arima012 <- zoo_arima012_fit$residuals
+acf(res_arima012, lag.max = 36)
+pacf(res_arima012, lag.max = 36)
+```
+
+The lags here also appear to be contained, except for the seasonal lags. 
+
+```{r arima012 seasonal}
+zoo_arima012_001_12fit <- arima(DSNY_BX_zoo_ts, order = c(0,1,2),
+                                seasonal = list(order = c(0L,0L,1), 
+                                                period = 12))
+res_arima012_001_12 <- zoo_arima012_001_12fit$residuals
+acf(res_arima012_001_12, lag.max = 36)
+pacf(res_arima012_001_12, lag.max = 36)
+```
+
+For this
 
