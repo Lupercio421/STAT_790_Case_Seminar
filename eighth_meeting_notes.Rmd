@@ -36,6 +36,8 @@ library(zoo)
 - Step 3: Seasonality()
 1. Look at the PACF to determine AR() or MA() terms
 
+- To return the RMSE, I had to use the accuracy function from the fabletools package. Which meant that I had to reuse or create the ARIMA models in the same manner shown in the fpp3 book.  
+
 ```{r echo = FALSE}
 #The use of "\\" is also welcomed
 load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
@@ -74,7 +76,7 @@ For ARIMA models with differencing, the differenced series follows a zero-mean A
 
 ### $\text{ARIMA(0,1,0)}$ with constant/mean
 
-```{r arima010}
+```{r arima010, warning=FALSE}
 zoo_arima010_fit <- arima(DSNY_BX_zoo_ts, 
                           order = 1 + c(0,1,0)) #the PACF plot return the same values
                           #with or without the include.mean = parameter
@@ -82,14 +84,16 @@ res_arima010 <- zoo_arima010_fit$residuals
 acf(res_arima010, lag.max = 36)
 pacf(res_arima010, lag.max = 36)
 accuracy(bx_arima010_fit)[4]
+autoplot(as.zoo(difference(DSNY_BX_zoo_ts),1))
 ```
 
-A constant term has been added with '1 +  c(0,1,0)'. As discussed before, a negative ACF value is indicative of the need to add an MA() parameter. Here we see that lag 3 is no longer significant, perhaps we can try to add MA(1) and MA(2) arguments to our differenced time series. 
+A constant term has been added with '1 +  c(0,1,0)'. As discussed before, a negative ACF value is indicative of the need to add an MA() parameter. Here we see that lag 3 is no longer significant, perhaps we try to add MA(1) and MA(2) arguments to our $\textbf{differenced}$ time series. 
 
 ### $\text{ARIMA(0,1,1)}$ with a constant
 
 ```{r arima011}
-bx_arima011_fit_cons <- bx_ts %>% model(arima011_constant = ARIMA(total_waste ~ 1 + pdq(0,1,1)))
+bx_arima011_fit_cons <- bx_ts %>% 
+  model(arima011_constant = ARIMA(total_waste ~ 1 + pdq(0,1,1)))
 zoo_arima011_fit <- arima(DSNY_BX_zoo_ts, 
                           order = 1 + c(0,1,1))
 res_arima011 <- zoo_arima011_fit$residuals
@@ -98,7 +102,8 @@ pacf(res_arima011, lag.max = 36)
 accuracy(bx_arima011_fit_cons)[4]
 ```
 
-The lag one value of the ACF plot is 1.0 and positive. With a seasonal pattern of significant lags at each whole lag. There definitely should be a seasonal argument.
+
+We can see that the RMSE of this model decreased, when compared to the ARIMA model with d = 1, and no other argument. There definitely should be a seasonal argument, as we see a seasonal pattern of significant lags at each integer lag.
 
 
 ```{r arima111, include=FALSE}
@@ -114,16 +119,19 @@ The lag one value of the ACF plot is 1.0 and positive. With a seasonal pattern o
 ### $\text{ARIMA(0,1,2)}$ with a constant
 
 ```{r arima012}
-bx_arima012_cons_fit <- bx_ts %>% model(arima012_cons = ARIMA(total_waste ~ 1 + pdq(0,1,2)))
+bx_arima012_cons_fit <- bx_ts %>% 
+  model(arima012_cons = ARIMA(total_waste ~ 1 + pdq(0,1,2)))
+
 zoo_arima012_fit <- arima(DSNY_BX_zoo_ts, 
                           order = 1+ c(0,1,2))
+
 res_arima012 <- zoo_arima012_fit$residuals
 acf(res_arima012, lag.max = 36)
 pacf(res_arima012, lag.max = 36)
 accuracy(bx_arima012_cons_fit)[4]
 ```
 
-Lags (2,4,8) are significant in the PACF(). I am not sure if the lag 2 value of the PACF() is encouraging us to add an AR(2) argument. I would believe that this would remove any progress we have made. For now, attempt an MA(1) model or I think it is best to address the seasonal lags. The RMSE is the lowest so far. 
+The RMSE continues to decrease. Lags (2,4,8) are significant in the PACF(). I am not sure if the lag 2 value of the PACF() is encouraging us to add an AR(2) argument. I would believe that this would remove any progress we have made. For now, I will attempt an MA(1) model. I also think it is best to address the seasonal lags.
 
 
 ```{r arima212, include=FALSE}
@@ -154,13 +162,16 @@ Lags (2,4,8) are significant in the PACF(). I am not sure if the lag 2 value of 
 $\text{ARIMA(0,1,2)(0,0,1)}_{12}$
 
 ```{r arima012 seasonal}
-bx_arima012_cons_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ 1 + 
-                                                                   pdq(0,1,2) + 
-                                                                   PDQ(0,0,1, period = 12)))
+bx_arima012_cons_001_12 <- bx_ts %>% 
+  model(bx_arima012_001_12 = ARIMA(total_waste ~ 1 + 
+                                     pdq(0,1,2) + 
+                                     PDQ(0,0,1, period = 12)))
+
 zoo_arima012_001_12fit <- arima(DSNY_BX_zoo_ts, 
                                 order = 1 + c(0,1,2),
                                 seasonal = list(order = c(0L,0L,1), 
                                                 period = 12))
+
 res_arima012_001_12 <- zoo_arima012_001_12fit$residuals
 acf(res_arima012_001_12, lag.max = 36)
 pacf(res_arima012_001_12, lag.max = 36)
@@ -173,39 +184,45 @@ It appears that the seasonal lags in the PACF() plot appear to still be signific
 $\text{ARIMA(0,1,1)(0,0,1)}_{12}$
 
 ```{r arima011 seasonal}
-bx_arima011_cons_001_12 <- bx_ts %>% model(bx_arima011_cons_001_12 = ARIMA(total_waste ~ 1 + 
-                                                                             pdq(0,1,1) + 
-                                                                             PDQ(0,0,1, period = 12))) 
+bx_arima011_cons_001_12 <- bx_ts %>% 
+  model(bx_arima011_cons_001_12 = ARIMA(total_waste ~ 1 + 
+                                          pdq(0,1,1) + 
+                                          PDQ(0,0,1, period = 12))) 
+
 zoo_arima011_001_12fit <- arima(DSNY_BX_zoo_ts, 
                                 order = 1 + c(0,1,1),
                                 seasonal = list(order = c(0L,0L,1), 
                                                 period = 12))
+
 res_arima011_001_12 <- zoo_arima011_001_12fit$residuals
 acf(res_arima011_001_12, lag.max = 36)
 pacf(res_arima011_001_12, lag.max = 36)
 accuracy(bx_arima011_cons_001_12)[4]
 ```
 
-In the ACF Plot(), the seasonal lags continue to be significant, as in they pass the 95% threshold. A similar story with the PACF(), but the non-seasonal lags appear to be close to the 95% confidence levels. The PACF values are small as well, so it would not be a major deal breaker. 
+In the ACF Plot(), the seasonal lags continue to be significant, as in they pass the 95% threshold. A similar story with the PACF(), but the non-seasonal lags appear to be close to the 95% confidence levels. The PACF values are small as well, so it would not be a major deal breaker. With our period  = 12, and seasonal lags are positive. This indicates that it is best to add an AR() seasonal argument. 
 
-### $\text{ARIMA(0,1,1)(1,0,0)}$ with a constant and seasonal period = 12
+### $\text{ARIMA(0,1,1)(1,0,0)}$ with a constant, seasonal AR() and seasonal period = 12
 $\text{ARIMA(0,1,1)(1,0,0)}_{12}$
 
 ```{r}
-bx_arima011_cons_100_12 <- bx_ts %>% model(bx_arima011_cons_100_12 = ARIMA(total_waste ~ 1 + 
-                                                                   pdq(0,1,1) + 
-                                                                   PDQ(1,0,0, period = 12)))
+bx_arima011_cons_100_12 <- bx_ts %>% 
+  model(bx_arima011_cons_100_12 = ARIMA(total_waste ~ 1 + 
+                                          pdq(0,1,1) + 
+                                          PDQ(1,0,0, period = 12)))
+
 zoo_arima011_cons_100_12fit <- arima(DSNY_BX_zoo_ts, 
                                 order = 1 + c(0,1,1),
                                 seasonal = list(order = c(1,0L,0L), 
                                                 period = 12))
+
 res_arima011_cons_100_12 <- zoo_arima011_cons_100_12fit$residuals
 acf(res_arima011_cons_100_12, lag.max = 36)
 pacf(res_arima011_cons_100_12, lag.max = 36)
 accuracy(bx_arima011_cons_100_12)[4]
 ```
 
-Lowest RMSE
+This model returns the lowest RMSE. The seasonal lags in th PACF are no longer significant. All non-seasonal lags, except for lag = 11, are insignificant.  
 
 ## In conclusion
-The models with the most promising ACF and PACF plots are $\text{ARIMA(0,1,1)(1,0,0)}_{12}$, and $\text{ARIMA(0,1,1)(0,0,1)}_{12}$. With my suspicion that the first model is overfitting the timeseries, and the other two models are returning adequate plots. 
+The models with the most promising ACF and PACF plots, and RMSE are $\text{ARIMA(0,1,1)(1,0,0)}_{12}$, and $\text{ARIMA(0,1,1)(0,0,1)}_{12}$.
