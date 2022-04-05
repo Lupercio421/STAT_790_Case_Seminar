@@ -1,0 +1,67 @@
+---
+title: "ACS data"
+author: "Daniel L."
+date: "4/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+## 2019 ACS data
+
+```{r}
+demo_2019_acs5yr_cdta <- read_excel("external_datasets/demo_2019_acs5yr_cdta.xlsx", 
+                                    sheet = "DemData")
+```
+
+```{r}
+#glimpse(demo_2019_acs5yr_cdta)
+```
+
+
+```{r deleting cd's of airports and parks}
+#demo_2019_acs5yr_cdta <- 
+#demo_2019_acs5yr_cdta %>% filter(GeoID != c("BX26", "BX27"),GeoID != "BX28", GeoID != ("SI95"))
+
+demo_2019_acs5yr_cdta <- demo_2019_acs5yr_cdta %>% filter(!GeoID %in% 
+                                   c("BK55","BK56", "BX26", "BX27", "BX28", "MN64", "QN80", "QN81", "QN82", "QN83", "QN84", "SI95"))
+
+#using stringr's str_sub on GeoID to create a separate communitydistrict column
+str_length(demo_2019_acs5yr_cdta$GeoID)
+# all these GeoID's have length 4, so we can select the 3rd and 4th letter in the character as our communitydistrict
+# demo_2019_acs5yr_cdta %>% mutate(as.integer(CD = case_when(starts_with(GeoID, 0))))
+as.integer(str_sub(demo_2019_acs5yr_cdta$GeoID, 3,4))
+demo_2019_acs5yr_cdta <- demo_2019_acs5yr_cdta %>% mutate(communitydistrict = as.integer(str_sub(GeoID, 3,4)))
+
+
+demo_2019_acs5yr_cdta %>% select(ends_with("E"))
+demo_2019_acs5yr_cdta %>% select(starts_with("P"))
+demo_2019_acs5yr_cdta %>% filter(names(.) %in% starts_with("Pop"))
+```
+
+help from this [article](https://statisticsglobe.com/r-extract-first-or-last-n-characters-from-string)
+and dpylr help from this [site](https://dplyr.tidyverse.org/reference/select.html)
+
+```{r}
+demo_2019_acs5yr_cdta %>% select(Borough,communitydistrict,ends_with("E"))
+```
+
+## Columns that end with "E" are estimates of the populations. They are integers. Also decide if it is worth grabbing the total population estimates of each individual country, or total population estimates of each race/origin.
+
+```{r econ data}
+econ_2019_acs5yr_cdta <- read_excel("external_datasets/econ_2019_acs5yr_cdta.xlsx", 
+    sheet = "EconData")
+
+econ_2019_acs5yr_cdta <- econ_2019_acs5yr_cdta %>% filter(!GeoID %in% 
+                                   c("BK55","BK56", "BX26", "BX27", "BX28", "MN64", "QN80", "QN81", "QN82", "QN83", "QN84", "SI95"))
+
+econ_2019_acs5yr_cdta <- econ_2019_acs5yr_cdta %>% mutate(communitydistrict = as.integer(str_sub(GeoID, 3,4)))
+```
+
