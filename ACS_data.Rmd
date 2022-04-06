@@ -14,7 +14,7 @@ library(tidyverse)
 library(readxl)
 ```
 
-## 2019 ACS data
+# 2019 ACS data
 
 ```{r}
 demo_2019_acs5yr_cdta <- read_excel("external_datasets/demo_2019_acs5yr_cdta.xlsx", 
@@ -43,7 +43,7 @@ demo_2019_acs5yr_cdta <- demo_2019_acs5yr_cdta %>% mutate(communitydistrict = as
 
 demo_2019_acs5yr_cdta %>% select(ends_with("E"))
 demo_2019_acs5yr_cdta %>% select(starts_with("P"))
-demo_2019_acs5yr_cdta %>% filter(names(.) %in% starts_with("Pop"))
+#demo_2019_acs5yr_cdta %>% filter(names(.) %in% starts_with("Pop"))
 ```
 
 help from this [article](https://statisticsglobe.com/r-extract-first-or-last-n-characters-from-string)
@@ -55,6 +55,8 @@ demo_2019_acs5yr_cdta %>% select(Borough,communitydistrict,ends_with("E"))
 
 ## Columns that end with "E" are estimates of the populations. They are integers. Also decide if it is worth grabbing the total population estimates of each individual country, or total population estimates of each race/origin.
 
+## 2019 Census Bureau ACS Economic Profile
+
 ```{r econ data}
 econ_2019_acs5yr_cdta <- read_excel("external_datasets/econ_2019_acs5yr_cdta.xlsx", 
     sheet = "EconData")
@@ -63,5 +65,89 @@ econ_2019_acs5yr_cdta <- econ_2019_acs5yr_cdta %>% filter(!GeoID %in%
                                    c("BK55","BK56", "BX26", "BX27", "BX28", "MN64", "QN80", "QN81", "QN82", "QN83", "QN84", "SI95"))
 
 econ_2019_acs5yr_cdta <- econ_2019_acs5yr_cdta %>% mutate(communitydistrict = as.integer(str_sub(GeoID, 3,4)))
+```
+
+```{r}
+econ_2019_acs5yr_cdta %>% select(ends_with("E"))
+```
+
+Attempting to get the total estimates, by borough
+
+```{r cd totals}
+#   mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE))
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) 
+```
+
+Help from [blog](https://www.tidyverse.org/blog/2020/04/dplyr-1-0-0-colwise/) by Hadley Wickham
+
+```{r}
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(1:131, sum))
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), sum))
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  transmute(total = summarise(across(where(is.numeric), sum)))
+
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>%
+  transmute(rowwise(.), total = summarise(across(where(is.numeric), sum)))
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), sum), n = n())
+```
+
+And more column-wise operations help with this [article](https://dplyr.tidyverse.org/dev/articles/colwise.html#multiple-functions)
+
+```{r}
+min_max <- list(
+  min = ~min(.x, na.rm = TRUE), 
+  max = ~max(.x, na.rm = TRUE)
+)
+
+total <- list(
+  total = ~sum(.x, na.rm = TRUE)
+)
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), min_max))
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+
 ```
 
