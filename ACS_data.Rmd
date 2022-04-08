@@ -53,6 +53,28 @@ and dpylr help from this [site](https://dplyr.tidyverse.org/reference/select.htm
 demo_2019_acs5yr_cdta %>% select(Borough,communitydistrict,ends_with("E"))
 ```
 
+```{r estimate totals by borough}
+total <- list(
+  total = ~sum(.x, na.rm = TRUE)
+)
+
+demo_2019_acs5yr_cdta %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+bx_2019_demo_total_estimates <- demo_2019_acs5yr_cdta %>%
+  filter(Borough == "Bronx") %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+```
+
+
 ## Columns that end with "E" are estimates of the populations. They are integers. Also decide if it is worth grabbing the total population estimates of each individual country, or total population estimates of each race/origin.
 
 ## 2019 Census Bureau ACS Economic Profile
@@ -99,47 +121,47 @@ econ_2019_acs5yr_cdta %>%
                    ignore.case = FALSE)) %>% 
   summarise(across(where(is.numeric), sum))
 
-econ_2019_acs5yr_cdta %>% 
-  group_by(Borough) %>% 
-  select(Borough,
-         ends_with("E",
-                   ignore.case = FALSE)) %>% 
-  transmute(total = summarise(across(where(is.numeric), sum)))
-
-
-econ_2019_acs5yr_cdta %>% 
-  group_by(Borough) %>% 
-  select(Borough,
-         ends_with("E",
-                   ignore.case = FALSE)) %>%
-  transmute(rowwise(.), total = summarise(across(where(is.numeric), sum)))
-
-econ_2019_acs5yr_cdta %>% 
-  group_by(Borough) %>% 
-  select(Borough,
-         ends_with("E",
-                   ignore.case = FALSE)) %>% 
-  summarise(across(where(is.numeric), sum), n = n())
+# econ_2019_acs5yr_cdta %>% 
+#   group_by(Borough) %>% 
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>% 
+#   transmute(total = summarise(across(where(is.numeric), sum)))
+# 
+# 
+# econ_2019_acs5yr_cdta %>% 
+#   group_by(Borough) %>% 
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>%
+#   transmute(rowwise(.), total = summarise(across(where(is.numeric), sum)))
+# 
+# econ_2019_acs5yr_cdta %>% 
+#   group_by(Borough) %>% 
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>% 
+#   summarise(across(where(is.numeric), sum), n = n())
 ```
 
 And more column-wise operations help with this [article](https://dplyr.tidyverse.org/dev/articles/colwise.html#multiple-functions)
 
 ```{r}
-min_max <- list(
-  min = ~min(.x, na.rm = TRUE), 
-  max = ~max(.x, na.rm = TRUE)
-)
+# min_max <- list(
+#   min = ~min(.x, na.rm = TRUE), 
+#   max = ~max(.x, na.rm = TRUE)
+# )
 
 total <- list(
   total = ~sum(.x, na.rm = TRUE)
 )
 
-econ_2019_acs5yr_cdta %>% 
-  group_by(Borough) %>% 
-  select(Borough,
-         ends_with("E",
-                   ignore.case = FALSE)) %>%
-  summarise(across(where(is.numeric), min_max))
+# econ_2019_acs5yr_cdta %>% 
+#   group_by(Borough) %>% 
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>%
+#   summarise(across(where(is.numeric), min_max))
 
 econ_2019_acs5yr_cdta %>% 
   group_by(Borough) %>% 
@@ -148,6 +170,53 @@ econ_2019_acs5yr_cdta %>%
                    ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
 
+bx_2019_econ_total_estimates <- econ_2019_acs5yr_cdta %>% 
+  filter(Borough == "Bronx") %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
 
 ```
 
+This method also works, as we will be returned a tibble of 655x3. Where instead of 132 columns per borough, we have 132 total values per borough
+
+```{r pivot_longer}
+# econ_2019_acs5yr_cdta %>%  
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>% 
+#   pivot_longer(
+#     cols = -Borough, # all columns except Borough should be made into one column
+#     names_to = "metric",
+#     values_to = "value") %>%
+#   group_by(Borough, metric) %>%
+#   summarise(total = sum(value)) %>% # sum up by borough and metric
+#   ungroup() 
+
+# econ_2019_acs5yr_cdta %>%  
+#   select(Borough,
+#          ends_with("E",
+#                    ignore.case = FALSE)) %>% 
+#   pivot_wider(
+#     id_cols = -Borough, # all columns except Borough should be made into one column
+#     names_to = "metric",
+#     values_to = "value") %>%
+#   group_by(Borough, metric) %>%
+#   summarise(total = sum(value)) %>% # sum up by borough and metric
+#   ungroup()
+```
+
+## Joining 2019 BX timeseries
+
+```{r}
+load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.Rdata")
+```
+
+### I now understand that the Economic and Demographic data is not divided into monthly values. Rather, they are estimates of an entire year.
+
+There is a chance we can join the demographic or economic data onto the community districts for the original training data frame. But again, we are given total estimates for the year. Data separated by community districts began for the year 2007. There are years where estimates are provided for two community districts in the Bronx and Manhattan. And there isn't always data for the year. Rather there is data for 3, 4, even 5 year estimates. Making this complicated to state estimates for a strict 1 year period. 
+
+On top of this, they are count values. Which could lead to the possibility of creating a count regression. Which would stray away from the goal of this project. 
