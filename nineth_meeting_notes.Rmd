@@ -1,0 +1,176 @@
+---
+title: "Nineth meeting notes"
+author: "Daniel L."
+date: "4/9/2022"
+output: html_document
+---
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(zoo)
+```
+
+```{r}
+load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.Rdata")
+```
+
+
+```{r DSNY_BX_train}
+total <- list(
+  total = ~ sum(.x, na.rm = TRUE)
+)
+# DSNY_train %>%
+#   filter(borough_id==2,
+#          communitydistrict==3) %>%
+#   ggplot(aes(month,refusetonscollected)) + geom_line()
+
+# DSNY_train %>%
+#   filter(borough_id==2) %>%
+#   select(-borough, borough_id) %>%
+#   arrange(month)
+  
+# demo_2019_acs5yr_cdta %>%
+#   group_by(Borough) %>% 
+#   select(Borough,
+#            ends_with("E",
+#                      ignore.case = FALSE)) %>%
+#   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+# DSNY_train %>%
+#   filter(borough_id==2) %>%  
+#   group_by(month, communitydistrict, borough) %>% 
+#   select(-borough, -borough_id, communitydistrict) %>%
+#   arrange(month) %>%
+#   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+DSNY_Qns_train <- DSNY_train %>%
+  group_by(month, borough) %>% 
+  select(-borough, -borough_id, -communitydistrict) %>%
+  arrange(month) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  filter(borough == "Queens") %>% 
+  ungroup()
+
+DSNY_BX_train <- DSNY_train %>%
+  group_by(month, borough) %>% 
+  select(-borough, -borough_id, -communitydistrict) %>%
+  arrange(month) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  filter(borough == "Bronx") %>% 
+  ungroup()
+
+DSNY_train %>%
+  filter(borough == "Bronx",
+         communitydistrict==1) %>%
+  group_by(month, borough, communitydistrict) %>% 
+  select(-borough, -borough_id, -communitydistrict) %>%
+  arrange(month) %>% 
+  ungroup()
+```
+```{r as_tibble DSNY_BX_train}
+# bx_ts2 %>% 
+#   mutate(month_num = row_number()) %>% 
+#   update_tsibble(index = month_num, regular = TRUE) %>% 
+#   mutate(diff1 = difference(total_waste, differences = 1, order_by = Month))
+
+# as_tsibble(DSNY_third_bronx_2, index = 'Month', regular = FALSE)
+
+bx_ts_multi <- DSNY_BX_train %>% 
+  mutate(month_num = row_number()) %>% 
+  as_tsibble(., index = month_num, regular = TRUE)
+
+qns_ts_multi <- DSNY_Qns_train %>% 
+  mutate(month_num = row_number()) %>% 
+  as_tsibble(., index = month_num, regular = TRUE)
+
+# DSNY_BX_train %>% 
+#   mutate(month_num = row_number()) %>% 
+#   as_tsibble(., index = month, regular = FALSE)
+```
+
+```{r trying to get NYC total}
+ # %>%
+ #  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+DSNY_train %>% 
+  group_by(month, borough) %>% 
+  select(-communitydistrict, borough_id) %>% 
+  arrange(month) %>% 
+  summarise(across(where(is.numeric), total, .names = "{col}_{.fn}"))
+
+NYC_total <- DSNY_train %>% 
+  group_by(month) %>% 
+  select(-c(communitydistrict, borough_id)) %>% 
+  arrange(month) %>% 
+  summarise(across(where(is.numeric), total, .names = "{col}_{.fn}")) %>% 
+  ungroup()
+
+nyc_ts_multi <- NYC_total %>% 
+  mutate(month_num = row_number()) %>% 
+  as_tsibble(., index = month_num, regular = TRUE)
+
+nyc_ts_multi2 <- NYC_total %>% 
+  mutate(month_num = row_number()) %>% 
+  as_tsibble(., index = month, regular = FALSE)
+```
+
+```{r NYC plots}
+nyc_ts_multi %>% ggplot() + geom_point(mapping = aes(x = month, y = refusetonscollected_total))
+
+nyc_ts_multi2 %>% autoplot(refusetonscollected_total)
+
+nyc_ts_multi2 %>% 
+  gg_season(refusetonscollected_total, labels = "right") +
+  labs(x = "Month",
+       y = "Refuse Collected (Tons)",
+       title = "Seasonal plot: New York City Total Refuse Tons Collected")
+nyc_ts_multi2 %>% gg_season(papertonscollected_total, labels = "right") +
+  labs(x = "Month",
+       y = "Paper Collected (Tons)",
+       title = "Seasonal plot: New York City Total Paper Tons Collected")
+nyc_ts_multi2 %>% gg_season(mgptonscollected_total, labels = "right") +
+  labs(x = "Month",
+       y = "MGP Collected (Tons)",
+       title = "Seasonal plot: New York City Total Metal, Glass and Plastic Tons Collected")
+
+nyc_ts_multi2 %>% gg_season(papertonscollected_total, period = "year")
+
+nyc_ts_multi2 %>% gg_subseries(refusetonscollected_total, period = "year")
+```
+
+```{r}
+# us_change %>%
+#   select(-Consumption, -Income) %>%
+#   pivot_longer(-Quarter) %>%
+#   ggplot(aes(Quarter, value, colour = name)) +
+#   geom_line() +
+#   facet_grid(name ~ ., scales = "free_y") +
+#   guides(colour = "none") +
+#   labs(y="% change")
+
+# bx_ts_multi %>%
+#   select(-xmastreetons_total, -resorganicstons_total, -leavesorganictons_total, -schoolorganictons_total) %>%
+#   ggplot(aes(month, value, colour = name)) +
+#   geom_line() +
+#   facet_grid(name ~ ., scales = "free_y") +
+#   guides(colour = "none") +
+#   labs(y="% change")
+```
+
+```{r attempt at a fit}
+bx_tslm_fit <- bx_ts_multi %>% 
+  model(tslm = TSLM(refusetonscollected_total ~ papertonscollected_total + mgptonscollected_total))
+
+report(bx_tslm_fit)
+```
+
+intercept is 22279.9385, 
