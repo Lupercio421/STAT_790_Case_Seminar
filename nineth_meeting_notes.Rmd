@@ -23,6 +23,100 @@ load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
 load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.Rdata")
 ```
 
+```{r arima001 constant}
+# and P=1, D=1
+DSNY_BX_zoo_ts <- ts(DSNY_third_bronx[,-1], 
+                     start = as.yearmon(DSNY_third_bronx$month)[1], 
+                     frequency = 12)
+
+bx_arima001_cons_110_12 <- bx_ts %>% 
+  model(bx_arima001_cons_110_12 = ARIMA(total_waste ~ 1 + 
+                                          pdq(0,0,1) + 
+                                          PDQ(1,0,0, period = 12)))
+
+zoo_arima001_cons_110_12fit <- arima(DSNY_BX_zoo_ts, 
+                                order = 1 + c(0,0,1),
+                                seasonal = list(order = c(1,1,0L), 
+                                                period = 12))
+
+res_arima001_cons_110_12 <- zoo_arima001_cons_110_12fit$residuals
+acf(res_arima001_cons_110_12, lag.max = 36)
+pacf(res_arima001_cons_110_12, lag.max = 36)
+accuracy(bx_arima001_cons_110_12)
+glance(bx_arima001_cons_110_12)
+
+```
+
+
+```{r}
+bx_total_waste_fit_final <-  bx_ts %>% model(stepwise = ARIMA(total_waste),
+                                       search = ARIMA(total_waste, stepwise = FALSE),
+                                       arima000 = ARIMA(total_waste ~ 1 + 
+                                                                            pdq(0,0,0) + 
+                                                                            PDQ(1,0,0, period = 12)),
+                                      arima011 = ARIMA(total_waste ~ 1 + 
+                                                                         pdq(0,1,1) + 
+                                                                         PDQ(1,0,0, period = 12)))
+#arima000_constant_seasonal
+#bx_arima011_cons_100_12
+# bx_total_waste_fit %>% 
+#   forecast(h = 8) %>% 
+#   autoplot(bx_ts) + labs(x = "Month Number",
+#                          y = "Total Waste")
+
+bx_total_waste_fit_final %>% 
+  forecast(h = 8) %>% 
+  autoplot(bx_ts2,
+           level = NULL) +
+  labs(x = "Month Number",
+       y = "Tonnage",
+       title = "Bronx Total Waste Tonnage",
+       subtitle = "(Jan 2015 - Dec 2020)") +
+  guides(colour = guide_legend(title = "Forecast"))
+
+accuracy(bx_total_waste_fit_final)
+
+bx_total_waste_fit_final %>% select(.model = arima000) %>% report()
+bx_total_waste_fit_final %>% select(.model = arima011) %>% report()
+ 
+bx_total_waste_fit_final %>% 
+  forecast(h = 8)
+
+bx_total_waste_fit_final %>% pivot_longer(everything(), 
+                                          names_to = "Model name",
+                                          values_to = "Orders")
+
+glance(bx_total_waste_fit_final) %>% arrange(AICc) %>% select(.model:BIC)
+
+bx_total_waste_fit_final %>% select(arima000) %>% gg_tsresiduals(lag=36)
+
+augment(bx_total_waste_fit_final) %>% 
+  filter(.model == "arima000") %>% 
+  features(.innov, 
+           ljung_box,
+           lag = 36,
+           dof=2)
+#The model fails the Ljung Box test, p-value = 0.0007
+augment(bx_total_waste_fit_final) %>% 
+  filter(.model == "arima011") %>% 
+  features(.innov, 
+           ljung_box,
+           lag = 36,
+           dof=2)
+#The model fails the Ljung Box test, p-value = 0.047
+
+forecast(bx_total_waste_fit_final, h = 6) %>% 
+  filter(.model == ('arima011')) %>% 
+  autoplot(bx_ts2,
+           level = NULL) +
+  labs(x = "Month Number",
+       y = "Tonnage",
+       title = "Bronx Total Waste Tonnage",
+       subtitle = "(Jan 2015 - Dec 2020)") +
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+When models are compared using AICc values, it is important that all models have the same orders of differencing. However, when comparing models using a test set, it does not matter how the forecasts were produced — the comparisons are always valid.
 
 ```{r DSNY_BX_train}
 total <- list(
