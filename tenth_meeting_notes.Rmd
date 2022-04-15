@@ -1,0 +1,104 @@
+---
+title: "Tenth Meeting Presentation"
+author: "Daniel L."
+date: "4/14/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(zoo)
+
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\acs_data.Rdata")
+```
+
+The American Community Survey is provided to residents every year in the United States. For data regarding the population of NYC, the NYC Department of City Planning has provided population [data](https://www1.nyc.gov/site/planning/planning-level/nyc-population/american-community-survey.page) for the years of 2005 through 2019. Originally, I was going to attempt to query the data directly from the ACS website. However, the data provided by the NYC agency is easier and better than cleaning the data. I have decided to investigate certain characteristics from the "Demographic" and "Economic" tables for the years of 2017 through 2019. For the years of 2017, and 2018, they are 3 year estimates. As mentioned, this data is not in a monthly timescale, but rather yearly estimates. What makes me hesitant to use these as forecasting variables is that these are estimates/counts. Which will most likely lead to a count regression approach that I would not like to take. 
+
+## 2019 ACS data
+
+With regards to the Demographic data for 2019, the fields that I believe were worth looking at were total estimates, by borough, of the "Total Population", "Hispanic/Latino" population, "Black and African alone" population, and "Asian Alone" population. 
+
+```{r}
+demo_2019_acs5yr_cdta %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  select(Borough,c(Pop_1E_total, Hsp2E_total, BlNHE_total, Asn1RcE_total))
+```
+
+For the 2019 economic data, the fields that I believe were worth looking at were the total estimates, by borough, of the "Population 16 years and over who are employed", ""Population 16 years and over who are unemployed", "Workers 16 years and over who use public transportation", "Workers 16 years and over who work from home", and "total households".
+ 
+
+```{r}
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total,
+                   CW_WrkdHmE_total, HH2E_total))
+```
+
+## 2018 ACS data
+
+```{r}
+demo_2018_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  select(Borough,c(Pop_1E_total, Hsp2E_total, BlNHE_total, Asn1RcE_total))
+```
+
+```{r}
+econ_2018_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, 
+                   CW_WrkdHmE_total, HH2E_total))
+```
+
+## 2017 ACS data
+
+```{r}
+demo_2017_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  select(Borough,c(Pop_1E_total, Hsp2E_total, BlNHE_total, Asn1RcE_total))
+```
+
+```{r}
+econ_2017_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total,
+                   CW_WrkdHmE_total, HH2E_total))
+```
+

@@ -46,6 +46,7 @@ demo_2019_acs5yr_cdta %>% select(starts_with("P"))
 #demo_2019_acs5yr_cdta %>% filter(names(.) %in% starts_with("Pop"))
 ```
 
+
 help from this [article](https://statisticsglobe.com/r-extract-first-or-last-n-characters-from-string)
 and dpylr help from this [site](https://dplyr.tidyverse.org/reference/select.html)
 
@@ -90,6 +91,7 @@ econ_2019_acs5yr_cdta <- econ_2019_acs5yr_cdta %>% mutate(communitydistrict = as
 ```
 
 ```{r}
+econ_2019_acs5yr_cdta %>% select(communitydistrict)
 econ_2019_acs5yr_cdta %>% select(ends_with("E"))
 ```
 
@@ -168,7 +170,8 @@ econ_2019_acs5yr_cdta %>%
   select(Borough,
          ends_with("E",
                    ignore.case = FALSE)) %>%
-  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
 
 bx_2019_econ_total_estimates <- econ_2019_acs5yr_cdta %>% 
   filter(Borough == "Bronx") %>% 
@@ -220,3 +223,144 @@ load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.
 There is a chance we can join the demographic or economic data onto the community districts for the original training data frame. But again, we are given total estimates for the year. Data separated by community districts began for the year 2007. There are years where estimates are provided for two community districts in the Bronx and Manhattan. And there isn't always data for the year. Rather there is data for 3, 4, even 5 year estimates. Making this complicated to state estimates for a strict 1 year period. 
 
 On top of this, they are count values. Which could lead to the possibility of creating a count regression. Which would stray away from the goal of this project. 
+
+## 2018 Demographic Data
+
+```{r}
+demo_2018_acs5yr_puma <- read_excel("external_datasets/demo_2018_acs5yr_puma.xlsx", 
+    sheet = "DemData")
+econ_2018_acs5yr_puma <- read_excel("external_datasets/econ_2018_acs5yr_puma.xlsx", 
+    sheet = "EconData")
+```
+
+```{r adding community district to the dataset}
+demo_2018_acs5yr_puma <- demo_2018_acs5yr_puma %>% 
+  mutate(communitydistrict = case_when(GeoID == 3701 ~ 8,
+                                       GeoID == 3702 ~ 12,
+                                       GeoID == 3703 ~ 10,
+                                       GeoID == 3704 ~ 11,
+                                       GeoID == 3705 ~ 3, #BX3 & BX6
+                                       GeoID == 3706 ~ 7,
+                                       GeoID == 3707 ~ 5,
+                                       GeoID == 3708 ~ 4,
+                                       GeoID == 3709 ~ 9,
+                                       GeoID == 3710 ~ 1, # BX1 & BX2
+                                       GeoID == 3801 ~ 12,
+                                       GeoID == 3802 ~ 9,
+                                       GeoID == 3803 ~ 10,
+                                       GeoID == 3804 ~ 11,
+                                       GeoID == 3805 ~ 8,
+                                       GeoID == 3806 ~ 7,
+                                       GeoID == 3807 ~ 4, #MN04 & MN05
+                                       GeoID == 3808 ~ 6,
+                                       GeoID == 3809 ~ 3,
+                                       GeoID == 3810 ~ 1, #MN01 & MN02
+                                       GeoID == 3901 ~ 3,
+                                       GeoID == 3902 ~ 2,
+                                       GeoID == 3903 ~ 1,
+                                       GeoID == 4001 ~ 1,
+                                       GeoID == 4002 ~ 4,
+                                       GeoID == 4003 ~ 3,
+                                       GeoID == 4004 ~ 2,
+                                       GeoID == 4005 ~ 6,
+                                       GeoID == 4006 ~ 8,
+                                       GeoID == 4007 ~ 16,
+                                       GeoID == 4008 ~ 5,
+                                       GeoID == 4009 ~ 18,
+                                       GeoID == 4010 ~ 17,
+                                       GeoID == 4011 ~ 9,
+                                       GeoID == 4012 ~ 7,
+                                       GeoID == 4013 ~ 10,
+                                       GeoID == 4014 ~ 12,
+                                       GeoID == 4015 ~ 14,
+                                       GeoID == 4016 ~ 15,
+                                       GeoID == 4101 ~ 1,
+                                       GeoID == 4102 ~ 3,
+                                       GeoID == 4103 ~ 7,
+                                       GeoID == 4104 ~ 11, 
+                                       GeoID == 4105 ~ 13,
+                                       GeoID == 4106 ~ 8,
+                                       GeoID == 4107 ~ 14,
+                                       GeoID == 4108 ~ 6,
+                                       GeoID == 4109 ~ 2,
+                                       GeoID == 4110 ~ 5,
+                                       GeoID == 4111 ~ 9,
+                                       GeoID == 4112 ~ 12,
+                                       GeoID == 4113 ~ 10,
+                                       GeoID == 4114 ~ 14) 
+)
+demo_2018_acs5yr_puma %>% select(communitydistrict)
+```
+
+```{r}
+demo_2018_acs5yr_puma %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+```
+
+```{r 2018 econ data}
+econ_2018_acs5yr_puma %>% 
+  filter(GeoID == 3710)
+
+# I will skip adding the community district for now
+
+econ_2018_acs5yr_puma %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
+```
+
+## 2017
+
+
+```{r demo 17 input}
+demo_2017_acs5yr_puma <- read_excel("external_datasets/demo_2017_acs5yr_puma.xlsx", 
+    sheet = "DemData")
+```
+
+```{r demo 17 group by }
+demo_2017_acs5yr_puma %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+demo_2017_acs5yr_puma %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  select(Borough,c(Pop_1E_total, Hsp2E_total, BlNHE_total, Asn1RcE_total))
+```
+
+```{r}
+#c(Pop_1E_total, Pop_2E_total, Hsp2E_total, Asn1RcE_total)
+```
+
+```{r econ 17 input}
+econ_2017_acs5yr_puma <- read_excel("external_datasets/econ_2017_acs5yr_puma.xlsx", 
+    sheet = "EconData")
+```
+
+```{r}
+econ_2017_acs5yr_puma %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("E",
+                   ignore.case = FALSE)) %>% 
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
+```
+
+```{r}
+save.image(file = "acs_data.RData")
+```
+
