@@ -59,6 +59,10 @@ total <- list(
   total = ~sum(.x, na.rm = TRUE)
 )
 
+average <- list(
+  avg = ~mean(.x, na.rm = TRUE)
+)
+
 demo_2019_acs5yr_cdta %>%
   group_by(Borough) %>% 
   select(Borough,
@@ -360,7 +364,47 @@ econ_2017_acs5yr_puma %>%
   select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
 ```
 
+# Working with percents
+
+```{r}
+demo_2019_acs5yr_cdta %>% select(ends_with("P"))
+```
+
+```{r}
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("P",
+                   ignore.case = FALSE))
+
+
+econ_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("P",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}"))
+#c(Pop16pl_avg, CvLF1_avg, CvEm16pl1E_avg, CvLFUEm1E_avg, CW_PbTrnsE_avg, CW_WrkdHmE_avg, HH2E_avg, MnHHInc_avg)
+```
+
+```{r demographic}
+demo_2019_acs5yr_cdta %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("P",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>% 
+  select(c(Borough,Femp_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
+
+bx_2019_demo_total_estimates <- demo_2019_acs5yr_cdta %>%
+  filter(Borough == "Bronx") %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("E",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+```
+
 ```{r}
 save.image(file = "acs_data.RData")
 ```
-
