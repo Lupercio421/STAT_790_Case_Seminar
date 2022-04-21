@@ -16,6 +16,7 @@ library(feasts)
 library(timetk)
 library(modeltime)
 library(zoo)
+library(tidymodels)
 ```
 
 ```{r}
@@ -268,3 +269,113 @@ report(bx_tslm_fit)
 ```
 
 intercept is 22279.9385, 
+
+# ARIMA Modeling with TimeTk and ModelTime
+
+Plot the data and identify any unusual observations.
+
+```{r plot}
+DSNY_third_bronx %>% tk_tbl(preserve_index = FALSE)
+
+
+DSNY_third_bronx %>% 
+  tk_tbl(preserve_index = FALSE) %>% 
+  plot_time_series(
+    .date_var = month,
+    .value = total_waste,
+    .smooth_alpha = 0.5,
+    .interactive = FALSE,
+    .title = "Total Waste Collected in the Bronx",
+    .x_lab = "Year",
+    .y_lab = "Tons Collected"
+  ) + 
+  labs(subtitle = "01/2005 - 12/2020")
+```
+
+
+```{r timetk BX arima011}
+model_spec_arima011 <- arima_reg(
+  seasonal_period = 12,
+  non_seasonal_ar = 0,
+  non_seasonal_ma = 1,
+  non_seasonal_differences = 1,
+  seasonal_ar = 1,
+  seasonal_differences = 0,
+  seasonal_ma = 0
+) %>% 
+  set_engine("arima")
+
+#Fit Spec
+
+model_fit_arima011 <- model_spec_arima011 %>% 
+  fit(total_waste ~ month + 1,
+      data = DSNY_third_bronx)
+
+model_fit_arima011
+```
+
+Plotting the ACF of the residuals and do a portmanteau test to make sure they look like white noise. If not white noise, then search a larger set of models to choose from. 
+
+```{r}
+# Create table of model to use
+arima011_model_tbl <- modeltime_table(model_fit_arima011)
+
+# Calibrate the model to produce confidence intervals, but I don't have the 'training data'
+arima011_calibration_tbl <- arima011_model_tbl %>% 
+  modeltime_calibrate(new_data = DSNY_third_bronx)
+
+# Create residuals table
+arima011_residuals_tbl <- arima011_calibration_tbl %>% modeltime_residuals()
+
+# Plot the residuals
+u1 <- arima011_residuals_tbl %>% 
+  plot_modeltime_residuals(
+    .type = "timeplot",
+    .interactive = FALSE)
+
+u2 <- arima011_residuals_tbl %>% 
+  plot_modeltime_residuals(
+    .type = 'acf',
+    .interactive = FALSE,
+    .title = 'ACF and PACF Plots')
+
+arima011_residuals_tbl %>% view()
+
+# Check for white noise with a Ljung-Box test
+# arima011_residuals_tbl %>% 
+#   select(.residuals, .index) %>% 
+#   as_tsibble() %>% 
+#   features(.residuals, ljung_box, lag = 12, dof = 0)
+```
+
+```{r arrange the plots}
+library(cowplot)
+u2
+
+plot_grid(u1, u2, ncol = 1)
+```
+
+```{r}
+# # 5. Once the residuals look like white noise, calculate forecasts.
+# arima011_calibration_tbl %>%
+#   modeltime_forecast(
+#       new_data = DSNY_third_bronx,
+#       actual_data = DSNY_third_bronx, # I think the plot fails at new_data and actual_data
+#       h = NULL
+#   ) %>%
+#   plot_modeltime_forecast(
+#       .legend_max_width = 25,
+#       .interactive = TRUE,
+#       .title = "Q",
+#       .x_lab = "Quarter",
+#       .y_lab = "Percent Change"
+#   ) %>%
+#   plotly::layout(  # Custom ggplotly layout
+#     legend = list(
+#       orientation = "h",   # Show model names horizontally
+#       xanchor = "center",  # Use center of legend as anchor
+#       x = 0.5, # Legend in center of x-axis
+#       y = -0.2) # Place legend below x-axis 
+#     )  
+```
+
