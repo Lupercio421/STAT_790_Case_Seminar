@@ -1,0 +1,41 @@
+---
+title: "Weather Attempts"
+author: "Daniel L."
+date: "4/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+[Weather data package](https://www.rdocumentation.org/packages/weatherData/versions/0.5.0)
+```{r}
+# install.packages("devtools")
+# library("devtools")9
+# install_github("Ram-N/weatherData")
+library(weatherData)
+```
+
+```{r}
+# getWeatherForDate(station_id = "KJFK", start_date = "2020-01-01")
+```
+
+[rwunderground](https://cran.r-project.org/web/packages/rwunderground/README.html)
+
+```{r}
+# devtools::install_github("ALShum/rwunderground")
+rwunderground::set_api_key("0k71IwSc")
+library(rwunderground)
+```
+
+```{r}
+set_location(PWS_id ="KNYNEWYO1653")
+```
+```{r}
+# almanac(set_location(PWS_id ="KNYNEWYO1653"))
+history(set_location(zip_code = "11369"), date = "20050101")
+```
+
