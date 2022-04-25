@@ -39,3 +39,27 @@ set_location(PWS_id ="KNYNEWYO1653")
 history(set_location(zip_code = "11369"), date = "20050101")
 ```
 
+# RNOAA
+
+[rnoaa](https://docs.ropensci.org/rnoaa/)
+[cran](https://cran.r-project.org/web/packages/rnoaa/rnoaa.pdf)
+
+```{r}
+#install.packages("rnoaa")
+library('plyr')
+library('rnoaa')
+library(dplyr)
+#https://www.ncdc.noaa.gov/cdo-web/webservices/v2
+options(noaakey = "MopopkuFWTfdYEzIOlffzMnkBUdDqrgB")
+```
+
+```{r} 
+ghcnd(stationid = "US1NYNY0074")
+ncdc_stations(ghcnd(stationid = "US1NYNY0074"))
+ncdc_datasets()
+```
+
+```{r}
+ncdc_datasets(datasetid = 'NORMAL_MLY', stationid = "US1NYNY0074", startdate = 2022-01-01, enddate = 2022-03-01)
+```
+
