@@ -29,14 +29,19 @@ library(weatherData)
 # devtools::install_github("ALShum/rwunderground")
 rwunderground::set_api_key("0k71IwSc")
 library(rwunderground)
+library(tidyverse)
 ```
 
 ```{r}
-set_location(PWS_id ="KNYNEWYO1653")
+my_weather_station <- "KNYNEWYO1620"
+#set_location(PWS_id ="KNYNEWYO1653")
 ```
 ```{r}
 # almanac(set_location(PWS_id ="KNYNEWYO1653"))
-history(set_location(zip_code = "11369"), date = "20050101")
+#history(set_location(zip_code = "11369"), date = "20050101")
+```
+```{r}
+weather_data<-history(set_location(PWS_id = my_weather_station), date = "20170801")
 ```
 
 # RNOAA
