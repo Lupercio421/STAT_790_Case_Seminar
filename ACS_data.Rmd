@@ -70,6 +70,14 @@ demo_2019_acs5yr_cdta %>%
                      ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
 
+demo_2019_acs5yr_cdta %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("P",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>% 
+  select(c(Borough,Pop65pl1P_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
+
 bx_2019_demo_total_estimates <- demo_2019_acs5yr_cdta %>%
   filter(Borough == "Bronx") %>% 
   group_by(Borough) %>% 
@@ -152,6 +160,9 @@ econ_2019_acs5yr_cdta %>%
 
 And more column-wise operations help with this [article](https://dplyr.tidyverse.org/dev/articles/colwise.html#multiple-functions)
 
+c(CvEm16pl1, CvLFUEm1, CW_PbTrns, CW_WrkdHm, MdHHInc) = 
+(In labor force - employed, In labor force - unemployed, Public Transportation, Worked at home, Median household income(dollars))
+
 ```{r}
 # min_max <- list(
 #   min = ~min(.x, na.rm = TRUE), 
@@ -175,7 +186,7 @@ econ_2019_acs5yr_cdta %>%
          ends_with("E",
                    ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>%
-  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
+  select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total,MdHHIncE_total))
 
 bx_2019_econ_total_estimates <- econ_2019_acs5yr_cdta %>% 
   filter(Borough == "Bronx") %>% 
@@ -215,7 +226,31 @@ This method also works, as we will be returned a tibble of 655x3. Where instead 
 #   ungroup()
 ```
 
-## Joining 2019 BX timeseries
+## 2019 Social Data
+
+```{r}
+soc_2019_acs5yr_cdta <- read_excel("external_datasets/soc_2019_acs5yr_cdta.xlsx", 
+    sheet = "SocData")
+
+soc_2019_acs5yr_cdta <- soc_2019_acs5yr_cdta %>% filter(!GeoID %in% c("BK55","BK56", "BX26", "BX27", "BX28", "MN64", "QN80", "QN81", "QN82", "QN83", "QN84", "SI95"))
+
+soc_2019_acs5yr_cdta <- soc_2019_acs5yr_cdta %>% mutate(communitydistrict = as.integer(str_sub(GeoID, 3,4))) 
+```
+
+c(EA_BchD, FamChU18, NFamA, LgOEnLEP2, Pop3plEn) = 
+(Bachelor's degree, Family households w/ own children under 18 years, Nonfamily households - householder living alone, Speak English less than "very well", Population 3 years and over enrolled in school)
+
+```{r average of percents}
+soc_2019_acs5yr_cdta %>% 
+  group_by(Borough) %>% 
+  select(Borough,
+         ends_with("P",
+                   ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>%
+  select(Borough,c(EA_BchDP_avg, FamChU18P_avg, NFamAP_avg, LgOEnLEP2P_avg, Pop3plEnP_avg))
+```
+
+# Joining 2019 BX timeseries
 
 ```{r}
 load("C:/Users/Daniel/Desktop/R/STAT_790/STAT_790_Case_Seminar/BX_ts.RData")
@@ -296,6 +331,9 @@ demo_2018_acs5yr_puma <- demo_2018_acs5yr_puma %>%
 demo_2018_acs5yr_puma %>% select(communitydistrict)
 ```
 
+c(Pop65pl1, Hsp1,WtNH,BlNH,AsnNH,Rc2plNH) = 
+(65 years and over, Hispanic/Latino (of any race), White alone, Black or African American alone, Asian alone, Two or more races)
+
 ```{r}
 demo_2018_acs5yr_puma %>% 
   group_by(Borough) %>% 
@@ -303,6 +341,14 @@ demo_2018_acs5yr_puma %>%
          ends_with("E",
                    ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
+
+demo_2018_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("P",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>% 
+  select(c(Borough,Pop65pl1P_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
 ```
 
 ```{r 2018 econ data}
@@ -334,15 +380,16 @@ demo_2017_acs5yr_puma %>%
   select(Borough,
          ends_with("E",
                    ignore.case = FALSE)) %>% 
-  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
-
-demo_2017_acs5yr_puma %>% 
-  group_by(Borough) %>% 
-  select(Borough,
-         ends_with("E",
-                   ignore.case = FALSE)) %>% 
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
   select(Borough,c(Pop_1E_total, Hsp2E_total, BlNHE_total, Asn1RcE_total))
+
+demo_2017_acs5yr_puma %>%
+  group_by(Borough) %>% 
+  select(Borough,
+           ends_with("P",
+                     ignore.case = FALSE)) %>%
+  summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>% 
+  select(c(Borough,Pop65pl1P_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
 ```
 
 ```{r}
@@ -364,7 +411,7 @@ econ_2017_acs5yr_puma %>%
   select(Borough,c(CvEm16pl1E_total, CvLFUEm1E_total, CW_PbTrnsE_total, CW_WrkdHmE_total, HH2E_total))
 ```
 
-# Working with percents
+# 2019 Working with percents
 
 ```{r}
 demo_2019_acs5yr_cdta %>% select(ends_with("P"))
@@ -384,6 +431,8 @@ econ_2019_acs5yr_cdta %>%
          ends_with("P",
                    ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}"))
+#c(MdHHlnc)
+
 #c(Pop16pl_avg, CvLF1_avg, CvEm16pl1E_avg, CvLFUEm1E_avg, CW_PbTrnsE_avg, CW_WrkdHmE_avg, HH2E_avg, MnHHInc_avg)
 ```
 
@@ -394,7 +443,7 @@ demo_2019_acs5yr_cdta %>%
            ends_with("P",
                      ignore.case = FALSE)) %>%
   summarise(across(where(is.numeric), average, .names = "{.col}_{.fn}")) %>% 
-  select(c(Borough,Femp_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
+  select(c(Borough,Pop65pl1P_avg, Hsp1P_avg,WtNHP_avg,BlNHP_avg,AsnNHP_avg,Rc2plNHP_avg))
 
 bx_2019_demo_total_estimates <- demo_2019_acs5yr_cdta %>%
   filter(Borough == "Bronx") %>% 
