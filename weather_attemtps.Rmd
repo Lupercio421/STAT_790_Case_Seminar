@@ -68,3 +68,35 @@ ncdc_datasets()
 ncdc_datasets(datasetid = 'NORMAL_MLY', stationid = "US1NYNY0074", startdate = 2022-01-01, enddate = 2022-03-01)
 ```
 
+# App.tommorow.io
+[Creating a Weather Data App Using Tomorrow.io API R Package](https://www.tomorrow.io/blog/creating-a-weather-data-app-using-tomorrow-io-api-r-package/)
+
+```{r}
+install.packages("githubinstall")
+install.packages("httr")
+#install.packages("Rtomorrow.io")
+```
+
+# OpenWeatherMap
+
+https://crazycapivara.github.io/owmr/
+
+https://openweathermap.org/api/
+
+```{r}
+#install.packages("owmr")
+```
+
+```{r}
+library(owmr)
+
+Sys.setenv(OWM_API_KEY = "acbab066c09fa497eb276f8a1216cb81")
+```
+
+```{r}
+# get current weather data by city name
+get_current("London", units = "metric") %>%
+  owmr_as_tibble() %>% 
+  names()
+```
+
