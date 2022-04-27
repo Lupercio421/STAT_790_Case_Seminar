@@ -89,8 +89,6 @@ https://openweathermap.org/api/
 
 ```{r}
 library(owmr)
-
-Sys.setenv(OWM_API_KEY = "acbab066c09fa497eb276f8a1216cb81")
 ```
 
 ```{r}
