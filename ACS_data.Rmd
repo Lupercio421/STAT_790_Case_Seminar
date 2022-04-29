@@ -454,6 +454,25 @@ bx_2019_demo_total_estimates <- demo_2019_acs5yr_cdta %>%
   summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}"))
 ```
 
+# Attempting to aggregate data for 2016
+
+```{r}
+library(readxl)
+demo_2016acs1yr_nyc <- read_excel("external_datasets/demo_2016acs1yr_nyc.xlsx", 
+    sheet = "DP05")
+demo_2016acs1yr_nyc$categories <- demo_2016acs1yr_nyc$...1 
+```
+
+```{r}
+demo_2016acs1yr_nyc %>% 
+  select(categories,BX_Percent) %>% 
+  filter(#categories == "65 years and over"|
+         categories == "65 to 74 years"|
+           categories == "75 to 84 years" |
+           categories == "85 years and over")
+```
+
+
 ```{r}
 save.image(file = "acs_data.RData")
 ```
