@@ -93,8 +93,50 @@ library(owmr)
 
 ```{r}
 # get current weather data by city name
-get_current("London", units = "metric") %>%
+get_current("11369", units = "metric") %>%
   owmr_as_tibble() %>% 
   names()
+```
+
+```{r}
+nyc <- search_city_list("New York City") %>% as.list()
+
+
+get_current(nyc$id, 
+            units = "metric") %>% 
+  owmr_as_tibble() %>% .[,1:6]
+
+res <- find_cities_by_geo_point(
+  lat = nyc$lat,
+  lon = nyc$lon,
+  cnt = 5,
+  units = "metric"
+) %>% 
+  owmr_as_tibble()
+
+idx <- c(names(res[1:6]), "name")
+res[,idx]
+
+#get forecast
+forecast <- get_forecast("New York City", 
+                         units = "imperial") %>% 
+  owmr_as_tibble()
+forecast[,1:6]
+```
+NYC has id = 5128581, 
+
+```{r}
+#apply functs to some columns
+
+funcs <- list(
+  temp = round,
+  wind_speed = round
+)
+
+forecast %<>% parse_columns(funcs)
+
+#some templating
+("{{dt_txt}}h {{temp}}°F, {{wind_speed}} m/s" %$$% forecast) %>% 
+  head(10)
 ```
 
