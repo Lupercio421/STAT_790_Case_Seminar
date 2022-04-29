@@ -1,0 +1,16 @@
+'05 - NYC & Boroughs only - PDF
+'06 - NYC & Boroughs only - PDF
+'07 - 3yr estimates have excel and pdf sheets. The CD sheet is divided by tabs, each CD has a tap. The columns of the sheets of the 3yrs of the NYC & Boroughs category are grouped together by borough and NYC level. 
+'08 - 1yr and 3yr estimates have excel and pdf sheets. The CD sheet is divided by tabs, each CD has a tap. The columns of the sheets of the 3yrs of the NYC & Boroughs category are grouped together by borough and NYC level. 
+'09 - 1yr and 3yr estimates have excel and pdf sheets. The "CD" sheet is divided by tabs, each CD has a tap. The columns of the sheets of the 3yrs of the NYC & Boroughs category are grouped together by borough and NYC level. 
+'10 - 1yr and 3yr estimates are pdfs. 1yr estimates at the "NYC & Boroughs" category only have values at the NYC level. The "CD" sheet is divided by tabs, each CD has a tab. The columns of the sheets of the 3yrs of the NYC & Boroughs category are grouped together by borough and NYC level.The 5yr estimates have excel sheets and are much cleaner
+'11 - There are 1yr estimates and 3yr estimates. All categories have pdf and excel sheet."NYC & Boroughs" have both NYC and Borough values. The sheet with CD has CD values, not in tabs, but in one single sheet.
+'12 - There are pdfs and excel sheets for 1, 3 and 5yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category
+'13 - There are pdfs and excel sheets for 1, 3 and 5yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category
+'14 - There are pdfs and excel sheets for 1 and 5yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category
+Boroughs" category. There are NYC and Borough values for the category
+'15 - There are pdfs and excel sheets for 1 and 5yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category
+'16 - There are pdfs and excel sheets for 1 and 5yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category
+'17 - There are pdfs and excel sheets for 1yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category. There are excel sheets at the 5yr estimates, the excel sheet is much cleaner
+'18 - There are pdfs and excel sheets for 1yr estimates at the "NYC and Boroughs" category. There are NYC and Borough values for the category. There are excel sheets at the 5yr estimates, the excel sheet is much cleaner
+'19 - There are excel sheets for 5yr estimates only at the CD level
