@@ -116,3 +116,4 @@ si_ts <- as_tsibble(DSNY_third_staten_island, index = 'month', regular = FALSE)
 si_ts2 <- as_tsibble(DSNY_third_staten_island_2,index = 'Month', regular = FALSE)
 ```
 
+Creating the zoo time series objects can be found in eigth meeting notes
