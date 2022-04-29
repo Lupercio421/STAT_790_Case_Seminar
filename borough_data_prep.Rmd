@@ -1,0 +1,118 @@
+---
+title: "More Boroughs"
+author: "Daniel L."
+date: "4/28/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(feasts)
+```
+
+```{r}
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep_boroughs.Rdata")
+```
+
+#Brooklyn
+
+## Total tonnage variable creation
+
+```{r}
+DSNY_third_brooklyn <- DSNY_third %>% 
+  filter(borough == 'Brooklyn') %>% 
+  select(-borough)
+
+DSNY_third_brooklyn_2 <- DSNY_third_brooklyn %>%
+  mutate(Month = yearmonth(month)) %>% 
+  ungroup() %>% 
+  select(-month)
+
+# Total tonnage tsibble creation
+bk_ts <- as_tsibble(DSNY_third_brooklyn, index = 'month', regular = FALSE)
+
+bk_ts2 <- as_tsibble(DSNY_third_brooklyn_2, index = 'Month', regular = FALSE)
+```
+
+### Total tonnage tsibble creation
+
+```{r}
+# bk_ts <- as_tsibble(DSNY_third_brooklyn, index = 'month', regular = FALSE)
+# bk_ts2 <- as_tsibble(DSNY_third_brooklyn_2, index = 'Month', regular = FALSE)
+```
+
+```{r}
+bk_ts %>% 
+  gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Brooklyn Total Waste Collected", y = "Total Waste")
+```
+
+# Queens
+
+```{r}
+DSNY_third_queens <- DSNY_third %>% 
+  filter(borough == 'Queens') %>% 
+  select(-borough)
+
+DSNY_third_queens_2 <- DSNY_third_brooklyn %>%
+  mutate(Month = yearmonth(month)) %>% 
+  ungroup() %>% 
+  select(-month)
+
+# Total tonnage tsibble creation
+qns_ts <- as_tsibble(DSNY_third_queens, index = 'month', regular = FALSE)
+
+qns_ts2 <- as_tsibble(DSNY_third_queens_2,index = 'Month', regular = FALSE)
+```
+
+```{r}
+qns_ts2 %>% gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Quees Total Waste Collected", y = "Total Waste")
+```
+
+# Manhattan
+
+```{r}
+DSNY_third_manhattan <- DSNY_third %>% 
+  filter(borough == 'Manhattan') %>% 
+  select(-borough)
+
+DSNY_third_manhattan_2 <- DSNY_third_manhattan %>%
+  mutate(Month = yearmonth(month)) %>% 
+  ungroup() %>% 
+  select(-month)
+
+# Total tonnage tsibble creation
+man_ts <- as_tsibble(DSNY_third_manhattan, index = 'month', regular = FALSE)
+
+man_ts2 <- as_tsibble(DSNY_third_manhattan_2,index = 'Month', regular = FALSE)
+```
+
+```{r}
+man_ts2 %>% gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Manhattan Total Waste Collected", y = "Total Waste")
+```
+
+# Staten Island
+
+```{r}
+DSNY_third_staten_island <- DSNY_third %>% 
+  filter(borough == 'Staten Island') %>% 
+  select(-borough)
+
+DSNY_third_staten_island_2 <- DSNY_third_staten_island %>%
+  mutate(Month = yearmonth(month)) %>% 
+  ungroup() %>% 
+  select(-month)
+
+si_ts <- as_tsibble(DSNY_third_staten_island, index = 'month', regular = FALSE)
+
+si_ts2 <- as_tsibble(DSNY_third_staten_island_2,index = 'Month', regular = FALSE)
+```
+
