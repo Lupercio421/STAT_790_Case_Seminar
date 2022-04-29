@@ -1,0 +1,16 @@
+---
+title: "Meeting 12 notes"
+author: "Daniel L."
+date: "4/29/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- Explain what seasonally adjusting means
+
+- We have around 200 time points, equivalent to 
+
+- Finish with SI seasonal ARIMA models
