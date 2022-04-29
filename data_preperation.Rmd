@@ -68,7 +68,13 @@ DSNY <- DSNY %>% mutate(total_waste = select(.,4:6) %>% rowSums(na.rm = TRUE))
 
 ```{r}
 DSNY_train <- DSNY %>% filter(month >= as.Date("2005-01-01") & month < as.Date("2021-01-01"))
+DSNY_train_long <- DSNY %>% filter(month < as.Date("2021-01-01"))
 ```
+
+```{r}
+save(DSNY_train, DSNY_train_long,DSNY_third, file = "data_prep_boroughs.Rdata")
+```
+
 
 ```{r}
 #Default borough, unless specified is the Bronx
