@@ -1,0 +1,187 @@
+---
+title: "MN_ts.Rmd"
+author: "Daniel L."
+date: "5/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(tseries)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(zoo)
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\MN_ts_data.Rdata")
+```
+
+```{r}
+man_ts %>% 
+  ggplot(mapping = aes(x = (month),
+                       y = total_waste)) + 
+  geom_line() + 
+  labs(x = "Year",
+       y = "Total Waste",
+       title = "Brooklyn Total Waste Collected",
+       subtitle = "01/2005 - 12/2020")
+```
+
+I should investigate the average tonnage collected in MN from 2005 through 2010.
+
+#### KPSS Test for 'total_waste'
+
+$H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
+
+If the p-value of the test is less than some significance level (e.g. $α = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
+
+```{r kpss test}
+#total waste values
+man_ts %>% features(total_waste, unitroot_kpss)
+
+#differenced values
+man_ts %>% features(diff1, unitroot_kpss)
+```
+
+According to the results of the KPSS test, we reject the $H_0$ when evaluating the total_waste values. We fail to reject the $H_0$ when evaluating the differenced values
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+kpss.test(man_ts$total_waste, null = "Trend")
+```
+# Begin by looking at ACF and PACF of the total_waste and differenced values
+
+```{r}
+man_ts3 %>% 
+  ACF(total_waste, lag_max = 36) %>% 
+  autoplot()
+
+#acf of the differenced values
+man_ts3 %>% 
+  ACF(diff1, lag_max = 36) %>% 
+  autoplot()
+
+man_ts3 %>% 
+  ggplot(mapping = aes(x = month, y = diff1)) + geom_line() +
+  labs(x = "Year", y = "Total Waste", title = "Differenced Values: Manhattan Total Waste Collected")
+```
+
+# Creating models with zoo() and the arima package from stats()
+
+```{r}
+DSNY_MN_zoo_ts <- ts(DSNY_third_manhattan[,2],
+   start = as.yearmon(DSNY_third_manhattan$month)[1],
+   frequency = 12)
+
+autoplot(as.zoo(DSNY_MN_zoo_ts))
+```
+
+## $\text{ARIMA(0,0,0)}$ with constant
+${ARIMA(0,0,0)}$
+
+```{r}
+man_arima000_fit_cons <- man_ts3 %>% 
+  model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0)))
+
+zoo_arima000_fit <- arima(DSNY_MN_zoo_ts, order = 1 + c(0,0,0))
+res_arima000 <- zoo_arima000_fit$residuals
+acf(res_arima000, lag.max = 36)
+pacf(res_arima000, lag.max = 36)
+accuracy(man_arima000_fit_cons)[4]
+```
+
+RMSE = 3501. The first significant lag in the ACF plot is lag 4. The first significant lag in the PACF plot is also lag 4. Both these lags are negative, which indicate the use of an MA() argument. The seasonal lags are once again present in both plots. In the PACF() plot, lag 6 is positive and significant.
+
+With out working with the differenced values yet, I will add the MA() or seasonal MA paramters first.
+
+## $\text{ARIMA(0,0,0)(1,0,0)}$ with constant and seasonal parameter
+${ARIMA(0,0,0)(1,0,0)}$
+
+```{r}
+man_arima000_fit_seasonal_cons <- man_ts3 %>% 
+  model(arima000_constant_seasonal = ARIMA(total_waste ~ 1 + 
+                                     pdq(0,0,0) + 
+                                     PDQ(1,0,0, period = 12)))
+        
+zoo_arima000_seasonal_fit <- arima(DSNY_MN_zoo_ts, 
+                          order = 1 + c(0,0,0),
+                          seasonal = list(order = c(1,0L,0L), period = 12))
+#names(zoo_arima000_fit)
+res_arima000_seasonal <- zoo_arima000_seasonal_fit$residuals
+acf(res_arima000_seasonal, lag.max = 36)
+pacf(res_arima000_seasonal, lag.max = 36)
+accuracy(man_arima000_fit_seasonal_cons)[4]
+```
+
+RMSE = 2499.473. The majority of the lags in the ACF plot are contained within bounds. Along with the lags of the PACF plot. Only lag = 14 is significant and positive. The values are bounded b/w (-0.20, 0.15).
+
+Let's work with an MA(4) model before we are confident in the previous model
+
+## $\text{ARIMA(0,0,4)}$ with constant
+${ARIMA(0,0,4)}$
+
+```{r}
+man_arima004_fit_cons <- man_ts3 %>% 
+  model(arima004_constant = ARIMA(total_waste ~ 1 + 
+                                    pdq(0,0,4)))
+        
+zoo_arima004_fit <- arima(DSNY_MN_zoo_ts, 
+                          order = 1 + c(0,0,4))
+#names(zoo_arima000_fit)
+res_arima004 <- zoo_arima004_fit$residuals
+acf(res_arima004, lag.max = 36)
+pacf(res_arima004, lag.max = 36)
+accuracy(man_arima004_fit_cons)[4]
+```
+
+The RMSE = 2826.278. We do see a decrease in the RMSE when compared to the first $\text{ARIMA(0,0,0)}$.The seasonal lags are significant in both plots. In the PACF plot, lags 1-12 are not significant and contained within the bounds. 
+
+Lets work with this model and add a seasonal argument.
+
+## $\text{ARIMA(0,0,4)(1,0,0)}$ with constant and seasonal
+$ARIMA(0,0,4)(1,0,0)_{12}$
+
+```{r}
+man_arima004_100_seasonal_fit_cons <- man_ts3 %>% 
+  model(arima004_constant = ARIMA(total_waste ~ 1 + 
+                                    pdq(0,0,4) + 
+                                    PDQ(1,0,0, 
+                                        period = 12)))
+        
+zoo_arima004_100_seasonalfit <- arima(DSNY_MN_zoo_ts, 
+                          order = 1 + c(0,0,4),
+                          seasonal = list(order = c(1, 0L, 0L), period = 12))
+#names(zoo_arima000_fit)
+res_arima004_100 <- zoo_arima004_100_seasonalfit$residuals
+acf(res_arima004_100, lag.max = 36)
+pacf(res_arima004_100, lag.max = 36)
+accuracy(man_arima004_100_seasonal_fit_cons)[4]
+```
+
+RMSE = 2386.418. In both plots, all first 12 lags are not significant. It is hard to explain why lag = 12 in the PACF plot is significant. This model is a strong contender.  
+
+Since we can also work with the differenced values, we will create some models with them
+
+## $\text{ARIMA(0,1,0)}$ with constant
+
+${ARIMA(0,1,0)}$
+
+```{r}
+man_arima010_fit_cons <- man_ts3 %>% 
+  model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
+
+zoo_arima010_fit <- arima(DSNY_MN_zoo_ts, order = 1 + c(0,1,0))
+res_arima010 <- zoo_arima010_fit$residuals
+acf(res_arima010, lag.max = 36)
+pacf(res_arima010, lag.max = 36)
+accuracy(man_arima010_fit_cons)[4]
+```
+
+RMSE = 3441.309. Try an MA(2) or MA(4) model and address the seasonality later. 
