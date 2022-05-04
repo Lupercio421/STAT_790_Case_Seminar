@@ -33,7 +33,7 @@ man_ts %>%
   geom_line() + 
   labs(x = "Year",
        y = "Total Waste",
-       title = "Brooklyn Total Waste Collected",
+       title = "Manhattan Total Waste Collected",
        subtitle = "01/2005 - 12/2020")
 ```
 
