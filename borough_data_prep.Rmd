@@ -30,7 +30,10 @@ load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep_
 ```{r}
 DSNY_third_brooklyn <- DSNY_third %>% 
   filter(borough == 'Brooklyn') %>% 
-  select(-borough)
+  select(-borough) %>% 
+  ungroup() %>% 
+  mutate(month_num = row_number()) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
 
 DSNY_third_brooklyn_2 <- DSNY_third_brooklyn %>%
   mutate(Month = yearmonth(month)) %>% 
@@ -41,6 +44,10 @@ DSNY_third_brooklyn_2 <- DSNY_third_brooklyn %>%
 bk_ts <- as_tsibble(DSNY_third_brooklyn, index = 'month', regular = FALSE)
 
 bk_ts2 <- as_tsibble(DSNY_third_brooklyn_2, index = 'Month', regular = FALSE)
+
+bk_ts3 <- as_tsibble(DSNY_third_brooklyn, index = 'month_num', regular = TRUE) %>% tsibble::fill_gaps()
+
+save(DSNY_third_brooklyn, DSNY_third_brooklyn_2, bk_ts, bk_ts2, bk_ts3, file = "BK_ts_data.Rdata")
 ```
 
 ### Total tonnage tsibble creation
@@ -60,7 +67,10 @@ bk_ts %>%
 ```{r}
 DSNY_third_queens <- DSNY_third %>% 
   filter(borough == 'Queens') %>% 
-  select(-borough)
+  select(-borough) %>% 
+  ungroup() %>% 
+  mutate(month_num = row_number()) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
 
 DSNY_third_queens_2 <- DSNY_third_brooklyn %>%
   mutate(Month = yearmonth(month)) %>% 
@@ -71,6 +81,10 @@ DSNY_third_queens_2 <- DSNY_third_brooklyn %>%
 qns_ts <- as_tsibble(DSNY_third_queens, index = 'month', regular = FALSE)
 
 qns_ts2 <- as_tsibble(DSNY_third_queens_2,index = 'Month', regular = FALSE)
+
+qns_ts3 <- as_tsibble(DSNY_third_queens, index = 'month_num', regular = TRUE) %>% tsibble::fill_gaps()
+
+save(DSNY_third_queens, DSNY_third_queens_2, qns_ts, qns_ts2,qns_ts3, file = "QNS_ts_data.Rdata")
 ```
 
 ```{r}
@@ -82,7 +96,10 @@ qns_ts2 %>% gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Pl
 ```{r}
 DSNY_third_manhattan <- DSNY_third %>% 
   filter(borough == 'Manhattan') %>% 
-  select(-borough)
+  select(-borough) %>% 
+  ungroup() %>% 
+  mutate(month_num = row_number()) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
 
 DSNY_third_manhattan_2 <- DSNY_third_manhattan %>%
   mutate(Month = yearmonth(month)) %>% 
@@ -93,6 +110,10 @@ DSNY_third_manhattan_2 <- DSNY_third_manhattan %>%
 man_ts <- as_tsibble(DSNY_third_manhattan, index = 'month', regular = FALSE)
 
 man_ts2 <- as_tsibble(DSNY_third_manhattan_2,index = 'Month', regular = FALSE)
+
+man_ts3 <- as_tsibble(DSNY_third_manhattan, index = 'month_num', regular = TRUE) %>% tsibble::fill_gaps()
+
+save(DSNY_third_manhattan, DSNY_third_manhattan_2, man_ts, man_ts2, man_ts3, file = "MN_ts_data.Rdata")
 ```
 
 ```{r}
@@ -104,7 +125,15 @@ man_ts2 %>% gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Pl
 ```{r}
 DSNY_third_staten_island <- DSNY_third %>% 
   filter(borough == 'Staten Island') %>% 
-  select(-borough)
+  select(-borough) %>% 
+  ungroup() %>% 
+  mutate(month_num = row_number()) %>% 
+  mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
+
+# DSNY_third_staten_island %>% 
+#   ungroup() %>% 
+#   mutate(month_num = row_number()) %>% 
+#   mutate(diff1 = difference(total_waste, differences = 1, order_by = month_num))
 
 DSNY_third_staten_island_2 <- DSNY_third_staten_island %>%
   mutate(Month = yearmonth(month)) %>% 
@@ -113,7 +142,11 @@ DSNY_third_staten_island_2 <- DSNY_third_staten_island %>%
 
 si_ts <- as_tsibble(DSNY_third_staten_island, index = 'month', regular = FALSE)
 
-si_ts2 <- as_tsibble(DSNY_third_staten_island_2,index = 'Month', regular = FALSE)
+si_ts2 <- as_tsibble(DSNY_third_staten_island_2,index = 'Month', regular = TRUE)
+
+si_ts3 <- as_tsibble(DSNY_third_staten_island, index = 'month_num', regular = TRUE) %>% tsibble::fill_gaps()
+
+save(DSNY_third_staten_island, DSNY_third_staten_island_2, si_ts, si_ts2, si_ts3, file = "SI_ts_data.Rdata")
 ```
 
-Creating the zoo time series objects can be found in eigth meeting notes
+Creating the zoo time series objects can be found in eighth meeting notes
