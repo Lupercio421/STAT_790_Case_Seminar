@@ -1,0 +1,103 @@
+---
+title: "Queens Time Series"
+author: "Daniel L."
+date: "5/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(tseries)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(zoo)
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\Queens_time_series\\QNS_ts_data.Rdata")
+```
+
+```{r}
+qns_ts %>% 
+  ggplot(mapping = aes(x = (month),
+                       y = total_waste)) + 
+  geom_line() + 
+  labs(x = "Year",
+       y = "Total Waste",
+       title = "Queens Total Waste Collected",
+       subtitle = "01/2005 - 12/2020")
+```
+
+```{r}
+DSNY_third_queens %>% 
+  group_by("Year" = year(month)) %>% 
+  summarise(., 
+            "Average Total Waste" = mean(total_waste))
+```
+
+#### KPSS Test for 'total_waste'
+
+$H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
+
+If the p-value of the test is less than some significance level (e.g. $\alpha = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
+
+```{r}
+#total waste values
+qns_ts %>% features(total_waste, unitroot_kpss)
+
+#differenced values
+qns_ts %>% features(diff1, unitroot_kpss)
+```
+
+According the KPSS test, both the QNS total_waste and differenced values fail to reject the $H_0$. 
+
+# Begin by looking at ACF and PACF of the total_waste and differenced values
+
+```{r}
+qns_ts3 %>% 
+  ACF(total_waste, lag_max = 36) %>% 
+  autoplot()
+
+#acf of the differenced values
+qns_ts3 %>% 
+  ACF(diff1, lag_max = 36) %>% 
+  autoplot()
+
+qns_ts3 %>% 
+  ggplot(mapping = aes(x = month, y = diff1)) + geom_line() +
+  labs(x = "Year", 
+       y = "Total Waste", 
+       title = "Differenced Values: Queens Total Waste Collected")
+```
+
+# Creating models with zoo() and the arima package from stats()
+
+```{r}
+DSNY_QNS_zoo_ts <- ts(DSNY_third_queens[,2],
+   start = as.yearmon(DSNY_third_queens$month)[1],
+   frequency = 12)
+```
+
+## $\text{ARIMA(0,0,0)}$ with constant
+${ARIMA(0,0,0)}$
+
+```{r}
+qns_arima000_fit_cons <- qns_ts3 %>% 
+  model(arima000_constant = ARIMA(total_waste ~ 1 + pdq(0,0,0)))
+
+zoo_arima000_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(0,0,0))
+res_arima000 <- zoo_arima000_fit$residuals
+acf(res_arima000, lag.max = 36)
+pacf(res_arima000, lag.max = 36)
+accuracy(qns_arima000_fit_cons)[4]
+```
+
+RMSE = 7382.682. In the ACF and PACF, the first significant lag is lag = 4 and has a negative autocorrelation value. 
+
