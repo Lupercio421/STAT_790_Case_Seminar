@@ -101,3 +101,224 @@ accuracy(qns_arima000_fit_cons)[4]
 
 RMSE = 7382.682. In the ACF and PACF, the first significant lag is lag = 4 and has a negative autocorrelation value. 
 
+Before I add MA(4), I would like to see how the plots of a model with a seasonal AR(1)
+
+## $\text{ARIMA(0,0,0)(1,0,0)[12]}$ with constant
+${ARIMA(0,0,0)}(1,0,0)[12]$
+
+```{r}
+qns_arima000_fit_seasonal_cons <- qns_ts3 %>% 
+  model(arima000_constant_seasonal = ARIMA(total_waste ~ 1 + 
+                                     pdq(0,0,0) + 
+                                     PDQ(1,0,0, period = 12)))
+        
+zoo_arima000_seasonal_fit <- arima(DSNY_QNS_zoo_ts, 
+                          order = 1 + c(0,0,0),
+                          seasonal = list(order = c(1,0L,0L), period = 12))
+#names(zoo_arima000_fit)
+res_arima000_seasonal <- zoo_arima000_seasonal_fit$residuals
+acf(res_arima000_seasonal, lag.max = 36)
+pacf(res_arima000_seasonal, lag.max = 36)
+accuracy(qns_arima000_fit_seasonal_cons)[4]
+```
+
+RMSE = 4413.677. The seasonal lags appear to be contained. The PACF plot shows us that lag = 3 has positive correlation. Lags = (11,23,35) also have positive correlation. 
+
+## $\text{ARIMA(3,0,0)(1,0,0)[12]}$ with constant
+${ARIMA(3,0,0)}(1,0,0)[12]$
+
+```{r}
+qns_arima300_fit_seasonal_cons <- qns_ts3 %>% 
+  model(arima300_constant_seasonal = ARIMA(total_waste ~ 1 + 
+                                     pdq(3,0,0) + 
+                                     PDQ(1,0,0, period = 12)))
+        
+zoo_arima300_seasonal_fit <- arima(DSNY_QNS_zoo_ts, 
+                          order = 1 + c(3,0,0),
+                          seasonal = list(order = c(1,0L,0L), period = 12))
+#names(zoo_arima000_fit)
+res_arima300_seasonal <- zoo_arima300_seasonal_fit$residuals
+acf(res_arima300_seasonal, lag.max = 36)
+pacf(res_arima300_seasonal, lag.max = 36)
+accuracy(qns_arima300_fit_seasonal_cons)[4]
+```
+
+RMSE = 4115.02. We do see a decrease in the RMSE. The first 11 lags in the PACF have low autocorrelations. Lag = 12 has significant negative autocorrelation. Lags = (11, 23, 35) continue to be significant.
+
+Lets work with an MA(4) model, with no seasonality. 
+
+## $\text{ARIMA(0,0,4)}$ with constant
+${ARIMA(0,0,4)}$
+
+```{r}
+qns_arima004_fit_cons <- qns_ts3 %>% 
+  model(arima004_constant = ARIMA(total_waste ~ 1 + pdq(0,0,4)))
+
+zoo_arima004_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(0,0,4))
+res_arima004 <- zoo_arima004_fit$residuals
+acf(res_arima004, lag.max = 36)
+pacf(res_arima004, lag.max = 36)
+accuracy(qns_arima004_fit_cons)[4]
+```
+
+Our RMSE = 5657.673 is a decrease from the first model. Most of the autocorrelations in the ACF plot appear to be contained The first significant lag in the PACF plot is lag = 9, and has negative autocorrelation. Lag = 12 is very positively auto correlated. 
+
+Lets work with an MA(4) model, with seasonality. 
+
+## $\text{ARIMA(0,0,4)(1,0,0)[12]}$ with constant
+${ARIMA(0,0,4)(1,0,0)[12]}$
+
+```{r}
+qns_arima004_100_fit_cons <- qns_ts3 %>% 
+  model(arima004_100_constant = ARIMA(total_waste ~ 1 + 
+                                    pdq(0,0,4) +
+                                    PDQ(1,0,0, period = 12)))
+
+zoo_arima004_100_fit <- arima(DSNY_QNS_zoo_ts, 
+                              order = 1 + c(0,0,4),
+                              seasonal = list(order = c(1, 0L, 0L),
+                                              period = 12))
+
+res_arima004_100 <- zoo_arima004_100_fit$residuals
+acf(res_arima004_100, lag.max = 36)
+pacf(res_arima004_100, lag.max = 36)
+accuracy(qns_arima004_100_fit_cons)[4]
+```
+
+RMSE = 4162.64. The first 10 lags are not significant in the PACF plot. The seasonal lags are negatively autocorrelated. Other lags are also significant. This model does not appear to produce a stable model, according to their plots. 
+
+## $\text{ARIMA(0,1,0)}$ with constant
+${ARIMA(0,1,0)}$
+
+```{r}
+qns_arima010_fit_cons <- qns_ts3 %>% 
+  model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
+
+zoo_arima010_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(0,1,0))
+res_arima010 <- zoo_arima010_fit$residuals
+acf(res_arima010, lag.max = 36)
+pacf(res_arima010, lag.max = 36)
+accuracy(qns_arima010_fit_cons)[4]
+```
+
+RMSE = 6502.128. In both the ACF and PACF plot, we do see a tiny lag-1 negative autocorrelation. According to rule 7, "The lag at which the ACF cuts off is the indicated number of MA terms." However, we also see that the first significant lag is lag-4, which is also negative. Lag-12 is positively correlated and significant. 
+
+Let's explore a MA(1) model
+
+## $\text{ARIMA(0,1,1)}$ with constant
+${ARIMA(0,1,1)}$
+
+```{r}
+qns_arima011_fit_cons <- qns_ts3 %>% 
+  model(arima011_constant = ARIMA(total_waste ~ 1 + pdq(0,1,1)))
+
+zoo_arima011_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(0,1,1))
+res_arima011 <- zoo_arima011_fit$residuals
+acf(res_arima011, lag.max = 36)
+pacf(res_arima011, lag.max = 36)
+accuracy(qns_arima011_fit_cons)[4]
+```
+
+RMSE = 6421.289, which is a decrease from the base differenced model. The lags = (1,2,3) are still not significant and we see that lag=1 in the PACF has become positive. What we need to keep in mind is that the seasonal lags, lag = 12 is approximately 0.5. Its possible to add a seasonal difference, or add a seasonal AR(1). 
+
+## $\text{ARIMA(0,1,1)(1,0,0)}$ with constant and seasonality
+
+${ARIMA(0,1,1)(1,0,0)[12]}$
+
+```{r}
+qns_arima011_100_fit_cons <- qns_ts3 %>% 
+  model(arima011_100_constant = ARIMA(total_waste ~ 1 + 
+                                        pdq(0,1,1) + 
+                                        PDQ(1,0,0,
+                                            period = 12)))
+
+zoo_arima011_100_fit <- arima(DSNY_QNS_zoo_ts, 
+                              order = 1 + c(0,1,1),
+                              seasonal = list(order = c(1,0L,0L),
+                                              period = 12))
+res_arima011_100 <- zoo_arima011_100_fit$residuals
+acf(res_arima011_100, lag.max = 36)
+pacf(res_arima011_100, lag.max = 36)
+accuracy(qns_arima011_100_fit_cons)[4]
+```
+
+A decrease in the RMSE = 4174.407. Now lag = 3 is significant and positively correlated. Lags = 11, 23, 35 are positive and significant. We also see that lag = 12, the seasonal lag is also significant. Although we see a decrease in the RMSE, the plots of PACF show mixing autocorrelations at high order lags.
+
+## $\text{ARIMA(3,1,1)(1,0,0)}$ with constant and seasonality
+
+${ARIMA(3,1,1)(1,0,0)[12]}$
+
+```{r}
+qns_arima311_100_fit_cons <- qns_ts3 %>% 
+  model(arima311_100_constant = ARIMA(total_waste ~ 1 + 
+                                        pdq(3,1,1) + 
+                                        PDQ(1,0,0,
+                                            period = 12)))
+
+zoo_arima311_100_fit <- arima(DSNY_QNS_zoo_ts, 
+                              order = 1 + c(3,1,1),
+                              seasonal = list(order = c(1,0L,0L),
+                                              period = 12))
+res_arima311_100 <- zoo_arima311_100_fit$residuals
+acf(res_arima311_100, lag.max = 36)
+pacf(res_arima311_100, lag.max = 36)
+accuracy(qns_arima311_100_fit_cons)[4]
+```
+
+## $\text{ARIMA(0,1,4)}$ with constant
+
+${ARIMA(0,1,4)}$
+
+```{r}
+qns_arima014_fit_cons <- qns_ts3 %>% 
+  model(arima014_constant = ARIMA(total_waste ~ 1 + pdq(0,1,4)))
+
+zoo_arima014_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(0,1,4))
+res_arima014 <- zoo_arima014_fit$residuals
+acf(res_arima014, lag.max = 36)
+pacf(res_arima014, lag.max = 36)
+accuracy(qns_arima014_fit_cons)[4]
+```
+
+RMSE = 5649.113
+
+## $\text{ARIMA(0,1,4)(1,0,0)[12]}$ with constant and seasonality
+
+${ARIMA(0,1,4)(1,0,0)[12]}$
+
+```{r}
+qns_arima014_100_fit_cons <- qns_ts3 %>% 
+  model(arima014_100_constant = ARIMA(total_waste ~ 1 + 
+                                        pdq(0,1,4) + 
+                                        PDQ(1,0,0,
+                                            period = 12)))
+
+zoo_arima014_100_fit <- arima(DSNY_QNS_zoo_ts, 
+                              order = 1 + c(0,1,4),
+                              seasonal = list(order = c(1,0L,0L),
+                                              period = 12))
+res_arima014_100 <- zoo_arima014_100_fit$residuals
+acf(res_arima014_100, lag.max = 36)
+pacf(res_arima014_100, lag.max = 36)
+accuracy(qns_arima014_100_fit_cons)[4]
+```
+
+RMSE = 4123.31. Bounded b/w (-0.2 and 0.2)
+
+## AutoArima
+
+```{r}
+qns_auto_arima_fit_cons <- qns_ts3 %>% 
+  model(stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste, 
+                       stepwise = FALSE, 
+                       approximation = FALSE))
+accuracy(qns_auto_arima_fit_cons)[1:4]
+```
+
+```{r}
+qns_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
+print("--------------")
+qns_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
