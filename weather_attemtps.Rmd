@@ -29,7 +29,6 @@ library(weatherData)
 # devtools::install_github("ALShum/rwunderground")
 rwunderground::set_api_key("0k71IwSc")
 library(rwunderground)
-library(tidyverse)
 ```
 
 ```{r}
@@ -41,7 +40,7 @@ my_weather_station <- "KNYNEWYO1620"
 #history(set_location(zip_code = "11369"), date = "20050101")
 ```
 ```{r}
-weather_data<-history(set_location(PWS_id = my_weather_station), date = "20170801")
+#weather_data<-history(set_location(PWS_id = my_weather_station), date = "20170801")
 ```
 
 # RNOAA
@@ -140,16 +139,25 @@ forecast %<>% parse_columns(funcs)
   head(10)
 ```
 
+# Weather.gov
+
+(https://www.weather.gov/wrh/Climate?wfo=okx)
+
 ```{r}
+library(tidyverse)
+library(lubridate)
 library(readxl)
-precipitation_data <- read_excel("external_datasets/precipitation_data.xlsx", 
-    sheet = "Sheet1")
+precipitation_data <- read_excel("external_datasets/noaa_weather_data.xlsx", 
+    sheet = "Monthly_Total_Precip")
+avg_temperature <- read_excel("external_datasets/noaa_weather_data.xlsx", 
+    sheet = "Monthly_Mean_Avg_Temperature")
+avg_CDD <- read_excel("external_datasets/noaa_weather_data.xlsx", 
+    sheet = "Monthly_Mean_CDD")
 ```
 
 ```{r}
-library(lubridate)
-precipitation_data %>% as.Date(as.character(Year), format = "%Y")
-precipitation_data$ ymd(sprintf("%d-01-01", precipitation_data$Year))
+# precipitation_data %>% as.Date(as.character(Year), format = "%Y")
+# precipitation_data$ ymd(sprintf("%d-01-01", precipitation_data$Year))
 ```
 
 ```{r}
@@ -157,11 +165,13 @@ precipitation_data_2 <- precipitation_data %>%
   pivot_longer(!Year, 
                names_to = "month",
                values_to = "avg_precip") %>% 
-  filter(month != "Annual") %>% 
+  filter(month != "Annual")
+
+precipitation_data_2 <- precipitation_data_2 %>% 
   mutate("day" = rep(1, nrow(precipitation_data_2)))
 
 # precipitation_data_2 %>% 
-# mutate("day" = rep(1, nrow(precipitation_data_2))) success
+# mutate("day" = rep(1, nrow(precipitation_data_2))) success and failure
 
 # precipitation_data_2 %>% 
 #   filter(month != "Annual") %>% 
@@ -175,7 +185,49 @@ precipitation_data_2 <- precipitation_data %>%
 
 precipitation_data_2$date <- paste(precipitation_data_2$Year, precipitation_data_2$month, precipitation_data_2$day, sep="-") %>% ymd() %>% as.Date()
 
-precipitation_data_2 %>% 
+precipitation_data_2 <- precipitation_data_2 %>% 
   select(date, avg_precip)
+```
+
+```{r avg temp clean}
+avg_temperature_2 <- avg_temperature %>% 
+  pivot_longer(!Year, 
+               names_to = "month",
+               values_to = "avg_temp") %>% 
+  filter(month != "Annual")
+
+avg_temperature_2 <- avg_temperature_2 %>% 
+  mutate("day" = rep(1, nrow(avg_temperature_2)))
+
+avg_temperature_2$date <- paste(avg_temperature_2$Year, avg_temperature_2$month, avg_temperature_2$day, sep="-") %>% ymd() %>% as.Date()
+
+avg_temperature_2 <- avg_temperature_2 %>% 
+  select(date, avg_temp)
+```
+
+```{r avg CDD clean}
+avg_CDD_2 <- avg_CDD %>% 
+  pivot_longer(!Year, 
+               names_to = "month",
+               values_to = "avg_CDD") %>% 
+  filter(month != "Annual")
+
+avg_CDD_2 <- avg_CDD_2 %>% 
+  mutate("day" = rep(1, nrow(avg_CDD_2)))
+
+avg_CDD_2$date <- paste(avg_CDD_2$Year, avg_CDD_2$month, avg_CDD_2$day, sep="-") %>% ymd() %>% as.Date()
+
+avg_CDD_2 <- avg_CDD_2 %>% 
+  select(date, avg_CDD)
+```
+
+## Column binding
+
+```{r one single dataframe}
+bind_cols(precipitation_data_2, avg_temperature_2, avg_CDD_2)
+#merge(precipitation_data_2, avg_temperature_2, avg_CDD_2, by = date, all.y = TRUE)
+data12 <- inner_join(precipitation_data_2, avg_temperature_2, by = "date")
+weather_data <- inner_join(data12, avg_CDD_2, by = "date")
+save(weather_data, file = "weather_data.Rdata")
 ```
 
