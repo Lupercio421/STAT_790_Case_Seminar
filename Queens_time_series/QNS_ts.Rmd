@@ -2,7 +2,9 @@
 title: "Queens Time Series"
 author: "Daniel L."
 date: "5/4/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -322,3 +324,10 @@ print("--------------")
 qns_auto_arima_fit_cons %>% select(.model = search) %>% report()
 ```
 
+## Summary of models
+
+${ARIMA(0,0,0)}(1,0,0)[12]$ has $RMSE \approx 4413.677$ \
+${ARIMA(3,0,0)}(1,0,0)[12]$ has $RMSE \approx 4115.02$ \
+${ARIMA(0,0,4)(1,0,0)[12]}$ has $RMSE \approx 4162.64$ \
+${ARIMA(3,1,1)(1,0,0)[12]}$ has $RMSE \approx 4111.87$ \
+$ARIMA(3,0,2)$ has $RMSE \approx 5477.051$

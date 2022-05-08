@@ -2,7 +2,9 @@
 title: "Brooklyn Total Waste"
 author: "Daniel L."
 date: "5/2/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -38,10 +40,10 @@ load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\BK_ts_data
 The majority of the tonnage values are bounded b/w (65000,90000).
 
 #### KPSS Test for 'total_waste'
-
+\
 $H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
 
-If the p-value of the test is less than some significance level (e.g. $α = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
+If the p-value of the test is less than some significance level (e.g. $\alpha = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
 
 ```{r kpss test}
 #total waste values
@@ -166,8 +168,10 @@ RMSE = 4444.908. Most of the lagged values are not-significant. They look good a
 
 Since we can also work with the differenced values, we will create some models with them
 
-## $\text{ARIMA(0,1,0)}$ with constant
-$\{ARIMA(0,1,0)}$
+## ${ARIMA(0,1,0)}$ with constant
+
+${ARIMA(0,1,0)}$
+
 ```{r}
 bk_arima010_fit_cons <- bk_ts3 %>% 
   model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
@@ -181,8 +185,8 @@ accuracy(bk_arima010_fit_cons)[4]
 
 RMSE = 6628.688. Try q = 2 or q = 4
 
-## $\text{ARIMA(0,1,2)}$ with constant
-$\{ARIMA(0,1,2)}$
+## ${ARIMA(0,1,2)}$ with constant
+${ARIMA(0,1,2)}$
 
 ```{r}
 bk_arima012_fit_cons<- bk_ts3 %>% 
@@ -198,6 +202,7 @@ accuracy(bk_arima012_fit_cons)[4]
 RMSE = 5528.971. Lag 4 in the PACF is still significant, along with the seasonal lag. 
 
 ## ${ARIMA(0,1,2)(1,0,0)}$ with constant
+
 ${ARIMA(0,1,2)(1,0,0)_{12}}$
 
 ```{r}
@@ -218,8 +223,9 @@ accuracy(bk_arima012_100_fit_seasonal_cons)[4]
 
 RMSE = 4427.169
 
-## $\text{ARIMA(0,1,4)}$ with constant
-$\{ARIMA(0,1,4)}$
+## ${ARIMA(0,1,4)}$ with constant
+
+${ARIMA(0,1,4)}$
 
 ```{r}
 bk_arima014_fit_cons<- bk_ts3 %>% 
@@ -235,6 +241,7 @@ accuracy(bk_arima014_fit_cons)[4]
 RMSE = 5410.265
 
 ## ${ARIMA(0,1,4)(1,0,0)}$ with constant
+
 ${ARIMA(0,1,4)(1,0,0)_{12}}$
 
 ```{r}
@@ -255,8 +262,28 @@ accuracy(bk_arima014_100_fit_seasonal_cons)[4]
 
 RMSE = 4392.534
 
+## Auto-arima
+
+For our final models, we will look and compare the results of an auto-arima model from the feasts package.
+
+```{r}
+bk_auto_arima_fit_cons <- bk_ts3 %>%
+  model(stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste,
+                       stepwise = FALSE,
+                       approximation = FALSE))
+accuracy(bk_auto_arima_fit_cons)[1:4]
+```
+
+```{r}
+bk_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
+print("--------------")
+bk_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
 ## Summary of models
 
 $ARIMA(0,0,4)(1,0,0)_{12}$ has $RMSE = 4444.908$ \
 ${ARIMA(0,1,2)(1,0,0)_{12}}$ has $RMSE = 4427.169$ \
-And ${ARIMA(0,1,4)(1,0,0)_{12}}$ has $RMSE = 4392.534$ \
+${ARIMA(0,1,4)(1,0,0)_{12}}$ has $RMSE = 4392.534$ \
+${ARIMA(3,0,3)}$ has $RMSE = 5219.698$

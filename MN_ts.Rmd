@@ -46,11 +46,11 @@ DSNY_third_manhattan %>%
             "Average Total Waste" = mean(total_waste))
 ```
 
-We do see about a decrease in average waste collected by 7,000 tons in 2010, when compared to 2005. And a decrease in average waste collected by 4,000 tons in 2020, when compared to 2011.
+We do see a decrease in average waste collected by 7,000 tons in 2010, when compared to 2005. And a decrease in average waste collected by 4,000 tons in 2020, when compared to 2011.
 
 
-#### KPSS Test for 'total_waste'
-
+#### KPSS Test for 'total_waste' 
+\
 $H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
 
 If the p-value of the test is less than some significance level (e.g. $\alpha = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
@@ -171,7 +171,8 @@ man_arima004_100_seasonal_fit_cons <- man_ts3 %>%
         
 zoo_arima004_100_seasonalfit <- arima(DSNY_MN_zoo_ts, 
                           order = 1 + c(0,0,4),
-                          seasonal = list(order = c(1, 0L, 0L), period = 12))
+                          seasonal = list(order = c(1, 0L, 0L), 
+                                          period = 12))
 #names(zoo_arima000_fit)
 res_arima004_100 <- zoo_arima004_100_seasonalfit$residuals
 acf(res_arima004_100, lag.max = 36)
@@ -179,7 +180,7 @@ pacf(res_arima004_100, lag.max = 36)
 accuracy(man_arima004_100_seasonal_fit_cons)[4]
 ```
 
-RMSE = 2386.418. In both plots, all first 16 lags are not significant. It is hard to explain why lag = 12 in the PACF plot is significant. This model is a strong contender.  
+RMSE = 2386.418. In both plots, all first 15 lags are not significant. It is hard to explain why lag = 16 in the PACF plot is significant. This model is a strong contender.  
 
 Since we can also work with the differenced values, we will create some models with them
 
@@ -191,7 +192,9 @@ ${ARIMA(0,1,0)}$
 man_arima010_fit_cons <- man_ts3 %>% 
   model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
 
-zoo_arima010_fit <- arima(DSNY_MN_zoo_ts, order = 1 + c(0,1,0))
+zoo_arima010_fit <- arima(DSNY_MN_zoo_ts, 
+                          order = 1 + c(0,1,0))
+
 res_arima010 <- zoo_arima010_fit$residuals
 acf(res_arima010, lag.max = 36)
 pacf(res_arima010, lag.max = 36)
@@ -263,7 +266,7 @@ pacf(res_arima014_100, lag.max = 36)
 accuracy(man_arima014_100_fit_cons)[4]
 ```
 
-RMSE = 2208.185. Which is a decrease when compared to ${ARIMA(0,1,2)(1,0,0)[12]}$. Again, the majority of the lags are contained within the bounds.However we are not able to make the lag 12 insignificant in both plots.
+RMSE = 2208.185. Which is a decrease when compared to ${ARIMA(0,1,2)(1,0,0)[12]}$. Again, the majority of the lags are contained within the bounds.However we are not able to make the lag 16 insignificant in both plots.
 
 ## Auto-arima
 
@@ -319,7 +322,7 @@ Yeah this model was going to have significant lags without adressing the seasona
 
 # Summary of Models
 
-$ARIMA(0,0,4)(1,0,0)_{12}$ has RMSE = 2386.46 \
+$ARIMA(0,0,4)(1,0,0)[12]$ has RMSE = 2386.46 \
 ${ARIMA(0,1,4)(1,0,0)[12]}$ has RMSE = 2208.185 \
 ${ARIMA(0,1,2)(1,0,0)[12]}$ has RMSE = 2215.12 \
 ${ARIMA(0,1,5)}$ is the search model and has RMSE = 2449.647 \

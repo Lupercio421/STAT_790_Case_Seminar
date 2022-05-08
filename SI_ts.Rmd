@@ -2,7 +2,9 @@
 title: "Staten Island Time Series"
 author: "Daniel L."
 date: "4/30/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -36,10 +38,10 @@ si_ts %>%
 We see that the majority of the values are bounded b/w (15000, 26000)
 
 #### KPSS Test for 'total_waste'
-
+\
 $H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
 
-If the p-value of the test is less than some significance level (e.g. $α = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
+If the p-value of the test is less than some significance level (e.g. $\alpha = .05$) then we reject the null hypothesis and conclude that the time series is not trend stationary.
 
 ```{r}
 si_ts %>% features(total_waste, unitroot_kpss)
@@ -99,48 +101,47 @@ pacf(res_arima000, lag.max = 36)
 accuracy(si_arima000_fit_cons)[4]
 ```
 
-From the first PACF $\text{1 + ARIMA(0,0,0)}$ we see significant values at lags 3 and 4. Lag 3 has a negative PACF value, indicating that we should begin with an MA(2) or MA(3) model on the undifferenced data. We also see that there is a significant positive value on lag 12. Because we know that our time series data is seasonal, we can look to add a seasonal AR parameter on the undifferenced data. 
+From the first PACF plot, ${ARIMA(0,0,0)}$ we see significant values at lags 3 and 4. Lag 3 has a negative PACF value, indicating that we should begin with an MA(3) or MA(4) model on the undifferenced data. We also see that there is a significant positive value on lag 12. Because we know that our time series data is seasonal, we can look to add a seasonal AR parameter on the undifferenced data. 
 
-## $\text{ARIMA(0,0,2)}$ with constant
+## $\text{ARIMA(0,0,3)}$ with constant
 
-Let's begin with $\text{1 + ARIMA(0,0,2)}$
+Let's begin with ${ARIMA(0,0,3)}$
 ```{r}
-si_arima002_fit_cons <- si_ts2 %>% 
+si_arima003_fit_cons <- si_ts2 %>% 
   model(arima002_constant = ARIMA(total_waste ~ 1 + 
-                                     pdq(0,0,2)))
+                                     pdq(0,0,3)))
 
-zoo_arima002_fit <- arima(DSNY_SI_zoo_ts, order = 1 + c(0,0,2))
+zoo_arima003_fit <- arima(DSNY_SI_zoo_ts, order = 1 + c(0,0,3))
 #names(zoo_arima000_fit)
-res_arima002 <- zoo_arima002_fit$residuals
-acf(res_arima002, lag.max = 36)
-pacf(res_arima002, lag.max = 36)
-accuracy(si_arima002_fit_cons)[4]
+res_arima003 <- zoo_arima003_fit$residuals
+acf(res_arima003, lag.max = 36)
+pacf(res_arima003, lag.max = 36)
+accuracy(si_arima003_fit_cons)[4]
 ```
 
-The seasonal lags are still significant on the ACF plot. On the PACF plot, the first three lags are not significant. However, lags (4,8,9) are significant. Along with lag 12, this still indicates that we should add a seasonal AR term on the undifferenced data. We do a lower RMSE value on this model.
+RMSE = 1250. The seasonal lags are still significant on the ACF plot. On the PACF plot, the first eight lags are not significant. However, lags (9,15,16) are significant. Along with lag 12, this still indicates that we should add a seasonal AR term on the undifferenced data. We do see a lower RMSE value on this model. A previous unsuccessful attempt at a  ${ARIMA(0,0,2)} had RMSE = 1329.
 
-## $\text{ARIMA(0,0,2)(1,0,0)}$ with constant and seasonal
+## $\text{ARIMA(0,0,3)(1,0,0)}$ with constant and seasonal
 
-$\text{ARIMA(0,0,2)(1,0,0)}_{12}$
+$\text{ARIMA(0,0,3)(1,0,0)}_{12}$
 
 ```{r}
-si_arima002_100_fit_cons <- si_ts2 %>% 
-  model(arima002_100_constant = ARIMA(total_waste ~ 1 + 
-                                    pdq(0,0,2) +
+si_arima003_100_fit_cons <- si_ts2 %>% 
+  model(arima003_100_constant = ARIMA(total_waste ~ 1 + 
+                                    pdq(0,0,3) +
                                     PDQ(1,0,0, period = 12)))
 
-zoo_arima002_100_fit <- arima(DSNY_SI_zoo_ts, 
-                          order = 1 + c(0,0,2),
+zoo_arima003_100_fit <- arima(DSNY_SI_zoo_ts, 
+                          order = 1 + c(0,0,3),
                           seasonal = list(order = c(1, 0L, 0L),
                                           period = 12))
-#names(zoo_arima000_fit)
-res_arima002_100 <- zoo_arima002_100_fit$residuals
-acf(res_arima002_100, lag.max = 36)
-pacf(res_arima002_100, lag.max = 36)
-accuracy(si_arima002_100_fit_cons)[4]
+res_arima003_100 <- zoo_arima003_100_fit$residuals
+acf(res_arima003_100, lag.max = 36)
+pacf(res_arima003_100, lag.max = 36)
+accuracy(si_arima003_100_fit_cons)[4]
 ```
 
-The bad thing we see here is that the RMSE has increased.The majority of the lags in the ACF plot are contain within the bounds. The first six lags in the PACF plot are contain within significant bounds, however, lags 12 and 36 are not. 
+RMSE = 1387.547. The bad thing we see here is that the RMSE has increased.The majority of the lags in the ACF plot are contained within the bounds. The first ten lags in the PACF plot are contained within significant bounds, however, lags = 11, 12, 35 are not. 
 
 ## $\text{ARIMA(0,0,0)(1,0,0)}$ with constant and seasonal
 
@@ -174,7 +175,7 @@ The RMSE continue to rise and the lags on the PACF plot do not improve. Onto the
 # si_ts2 %>% 
 #   model(arima010_constant = ARIMA(total_waste ~ pdq(0,1,0) + 1))
 
-si_arima010_fit_cons <- si_ts2 %>% 
+si_arima010_fit_cons <- si_ts3 %>% 
   model(arima010_constant = ARIMA(total_waste ~ 1 + pdq(0,1,0)))
 
 zoo_arima010_fit <- arima(DSNY_SI_zoo_ts, 
@@ -189,6 +190,8 @@ accuracy(si_arima010_fit_cons)[4]
 The PACF plot does show significant negative values at lags 3 and 4. And a positive significant lag at lag 12. We begin with an RMSE of 2164.96
 
 ## $\text{ARIMA(0,1,3)}$ with constant
+
+${ARIMA(0,1,3)}$
 
 ```{r}
 # si_ts2 %>% 
@@ -226,11 +229,11 @@ pacf(res_arima213, lag.max = 36)
 accuracy(si_arima213_fit_cons)[4]
 ```
 
-AIC = 1800. In the ACF plot, the majority of the lags are not significant. However, the seasonal lags are significant and positive. In the PACF plot, lags 1-5 are not significant, but we see a significant and positive lag at 6, negative at lags (9,10). The seasonal lags spike again, so lets address that first. 
+RMSE = 1800. In the ACF plot, the majority of the lags are not significant. However, the seasonal lags are significant and positive. In the PACF plot, lags 1-5 are not significant, but we see a significant and positive lag at 6, negative at lags (9,10). The seasonal lags spike again, so lets address that first. 
 
 ## $\text{ARIMA(2,1,3)(1,0,0)}$ with constant
 
-$\text{1 + \{ARIMA(2,1,3)(1,0,0)_{12}}}$
+${ARIMA(2,1,3)(1,0,0)_{12}}$
 
 Lets deal with the common seasonality patter with this same arguments for now, to see if that can help stabilize the PACF values
 
@@ -253,23 +256,44 @@ accuracy(si_arima213_100_fit_cons)[4]
 
 RMSE = 1371. All of the lags in the ACF plot appear to be within bounds. The majority of the lags in the PACF plot are within the bounds. But lags = (11,23,35) are significant. The majority of the lags are bounded b/w (-0.15, 0.20). The RMSE score is good enough? Adding more parameters would perhaps create an overfitted model.
 
-Models with low RMSE: $\text{1 + ARIMA(0,0,2)}$ with $\text{RMSE=1328.737	}$ and 
-$\text{1 + \{ARIMA(2,1,3)(1,0,0)_{12}}}$ with $\text{RMSE=1371.112}$
+## Auto-arima
 
-#Plots and visualizations
+```{r}
+si_auto_arima_fit_cons <- si_ts3 %>%
+  model(stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste,
+                       stepwise = FALSE,
+                       approximation = FALSE))
+accuracy(si_auto_arima_fit_cons)[1:4]
+```
+
+```{r}
+si_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
+si_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
+## Summary of the waste models
+
+${ARIMA(0,0,3)}$ with $RMSE\approx 1251$ \
+${ARIMA(0,0,3)(1,0,0)}_{12}$ with $RMSE\approx 1388$ \
+${ARIMA(0,1,3)}$ with $RMSE\approx 1910$ \
+${ARIMA(2,1,3)(1,0,0)_{12}}$ with ${RMSE \approx 1371.112}$
+${ARIMA(2,1,4)}$ with ${RMSE \approx 1746.309}$
+
+# Plots and visualizations
 
 ```{r lag plot of total waste}
 si_ts3 %>% gg_lag(total_waste, geom = "point", lags = 12)
 ```
 
 ```{r}
-si_arima002_fit_cons %>% gg_tsresiduals()
+si_arima003_fit_cons %>% gg_tsresiduals()
 ```
 
 ### Preliminary forecast of si_arima002_fit_cons
 
 ```{r}
-si_arima002_fit_cons %>% 
+si_arima003_fit_cons %>% 
   forecast(h = 4) %>% 
   autoplot(si_ts2)
 ```
@@ -279,11 +303,4 @@ si_arima002_fit_cons %>%
 si_arima213_100_fit_cons %>% forecast(h = 4) %>% autoplot(si_ts2)
 ```
 
-## Creating the final waste model
-
 Refer to data_prep file, around line 557 and nineth_meeting_notes file around line 109 for more plots designs
-
-```{r}
-total_waste_fit_final
-```
-
