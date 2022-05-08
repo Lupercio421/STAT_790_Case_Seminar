@@ -150,3 +150,23 @@ save(DSNY_third_staten_island, DSNY_third_staten_island_2, si_ts, si_ts2, si_ts3
 ```
 
 Creating the zoo time series objects can be found in eighth meeting notes
+
+```{r NYC}
+total <- list(
+  total = ~sum(.x, na.rm = TRUE)
+)
+
+average <- list(
+  avg = ~mean(.x, na.rm = TRUE)
+)
+
+DSNY_NYC <- DSNY_train %>% 
+  group_by(month) %>%
+  summarise(across(where(is.numeric), total, .names = "{.col}_{.fn}")) %>% 
+  select(-c(communitydistrict_total,borough_id_total))
+```
+
+```{r}
+save(DSNY_NYC, DSNY_third, DSNY_train, DSNY_train_long, file = "NYC_waste_tonnage.Rdata")
+```
+
