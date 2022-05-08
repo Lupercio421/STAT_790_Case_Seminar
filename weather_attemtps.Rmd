@@ -140,3 +140,42 @@ forecast %<>% parse_columns(funcs)
   head(10)
 ```
 
+```{r}
+library(readxl)
+precipitation_data <- read_excel("external_datasets/precipitation_data.xlsx", 
+    sheet = "Sheet1")
+```
+
+```{r}
+library(lubridate)
+precipitation_data %>% as.Date(as.character(Year), format = "%Y")
+precipitation_data$ ymd(sprintf("%d-01-01", precipitation_data$Year))
+```
+
+```{r}
+precipitation_data_2 <- precipitation_data %>% 
+  pivot_longer(!Year, 
+               names_to = "month",
+               values_to = "avg_precip") %>% 
+  filter(month != "Annual") %>% 
+  mutate("day" = rep(1, nrow(precipitation_data_2)))
+
+# precipitation_data_2 %>% 
+# mutate("day" = rep(1, nrow(precipitation_data_2))) success
+
+# precipitation_data_2 %>% 
+#   filter(month != "Annual") %>% 
+#   view() success
+
+# with(precipitation_data_2, sprintf("%d-01-%02d", Year, month)) fail
+# as.Date(with(precipitation_data_2, paste(Year, month, "01", sep ="-")), "%Y-%m-%d") fail
+
+# precipitation_data_2 %>% 
+#   mutate(date = make_date(Year, month, day)) fail
+
+precipitation_data_2$date <- paste(precipitation_data_2$Year, precipitation_data_2$month, precipitation_data_2$day, sep="-") %>% ymd() %>% as.Date()
+
+precipitation_data_2 %>% 
+  select(date, avg_precip)
+```
+
