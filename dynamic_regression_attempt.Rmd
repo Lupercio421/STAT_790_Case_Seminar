@@ -1,0 +1,31 @@
+---
+title: "Dynamic Regression"
+author: "Daniel L."
+date: "5/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(tseries)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(zoo)
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\NYC_waste_tonnage.Rdata")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_datasets\\weather_data.Rdata")
+```
+
+```{r}
+#inner_join(DSNY_NYC, weather_data)
+```
+
