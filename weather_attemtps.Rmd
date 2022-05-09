@@ -139,7 +139,7 @@ forecast %<>% parse_columns(funcs)
   head(10)
 ```
 
-# Weather.gov
+d# Weather.gov
 
 (https://www.weather.gov/wrh/Climate?wfo=okx)
 

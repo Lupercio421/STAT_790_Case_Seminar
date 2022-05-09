@@ -1,0 +1,105 @@
+---
+title: "Economic Data"
+author: "Daniel L."
+date: "5/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+```
+
+
+# NYS Unemployment Rate
+
+https://fred.stlouisfed.org/series/NYUR
+https://www.bls.gov/regions/new-york-new-jersey/new_york.htm
+
+```{r}
+NYUR <- read_excel("external_datasets/NYUR.xlsx")
+
+NYUR$month <- ymd(NYUR$observation_date)
+# consumer_price_index_seasonally_adjusted %>% 
+#   filter(month(DATE) >= '2005-01-01') CPI already begins in Jan of 2005
+
+NYS_unem <- NYUR %>%
+  filter(observation_date >= '2005-01-01' & (observation_date) < '2021-01-01') %>% 
+  select(-1)
+```
+
+# NYC Unemployment Rate
+
+https://statistics.labor.ny.gov/laus.asp
+Not seasonaly adjusted - https://statistics.labor.ny.gov/lstechseas.shtm
+https://www.bls.gov/regions/new-york-new-jersey/data/xg-tables/ro2xglausnyc.htm
+
+```{r}
+nyc_unemployment_rate <- read_excel("external_datasets/nyc_unemployment_data.xlsx", 
+    sheet = "unemployment_rate")
+```
+
+Pivot Longer
+
+```{r}
+nyc_unemployment_rate2 <- nyc_unemployment_rate %>% 
+  pivot_longer(!Year,
+               names_to = "month1",
+               values_to = "unemp_rate") %>% 
+  filter(month1 != "Ann Avg")
+
+nyc_unemployment_rate2 <- nyc_unemployment_rate2 %>% 
+  mutate("day" = rep(1, nrow(nyc_unemployment_rate2)))
+
+nyc_unemployment_rate2$month <- paste(nyc_unemployment_rate2$Year, 
+      nyc_unemployment_rate2$month1, 
+      nyc_unemployment_rate2$day, 
+      sep = "-") %>% 
+  ymd() %>% 
+  as.Date()
+
+nyc_unemployment_rate_final <- nyc_unemployment_rate2 %>% 
+  select(month, unemp_rate) %>% 
+  filter(month >= '2005-01-01' & month < '2021-01-01')
+```
+
+# NYS CPI
+
+```{r}
+nys_cpi <- read_excel("external_datasets/consumer_price_index.xlsx", 
+    sheet = "NYS_CPI")
+```
+
+```{r}
+nys_cpi2 <- nys_cpi %>% 
+  pivot_longer(!Year,
+               names_to = "month1",
+               values_to = "cpi") %>% 
+  filter(month1 != "Avg")
+
+nys_cpi2 <- nys_cpi2 %>% 
+  mutate("day" = rep(1, nrow(nys_cpi2)))
+
+nys_cpi2$month <- paste(nys_cpi2$Year, 
+      nys_cpi2$month1, 
+      nys_cpi2$day, 
+      sep = "-") %>% 
+  ymd() %>% 
+  as.Date()
+
+nys_cpi_final <- nys_cpi2 %>% 
+  select(month, cpi) %>% 
+  filter(month >= '2005-01-01' & month < '2021-01-01')
+```
+
+# Export the two dataframes
+
+```{r}
+save(nyc_unemployment_rate_final, nys_cpi_final, file = "economic_variables.Rdata")
+```
+

@@ -20,6 +20,7 @@ library(tseries)
 library(feasts)
 library(timetk)
 library(modeltime)
+library(readr)
 library(zoo)
 load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\NYC_waste_tonnage.Rdata")
 load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_datasets\\weather_data.Rdata")
@@ -27,5 +28,53 @@ load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_d
 
 ```{r}
 #inner_join(DSNY_NYC, weather_data)
+```
+
+# CPI Data and Unemployment Data
+
+```{r CPI}
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_datasets\\economic_variables.Rdata")
+```
+ 
+# Filter Weather Data: Jan '05 - Dec '20
+
+```{r}
+nyc_weather_data <- weather_data %>% 
+  filter(date >= '2005-01-01' & date <= '2020-12-01') %>% 
+  rename(month = 1)
+```
+
+# Joining all the datasets
+
+```{r}
+# Joining weather and cpi data
+weather_cpi_data <- inner_join(nyc_weather_data, nys_cpi_final, by = 'month')
+
+# Joining weather/cpi data and unemployment rate
+weather_cpi_unemp <- inner_join(weather_cpi_data, nyc_unemployment_rate_final, by = 'month')
+
+#final join
+final_nyc_data <- inner_join(DSNY_NYC, weather_cpi_unemp, by = 'month') 
+
+final_nyc_data <- final_nyc_data %>%
+  mutate(month_num = seq.int(nrow(DSNY_NYC)))
+```
+
+# Final Dataset
+```{r}
+final_nyc_data< - final_nyc_datafinal_nyc_data %>% 
+  select(1, c(9:14))
+```
+
+# Dynamic Regression
+
+When we estimate the parameters from the model, we need to minimize the sum of squared $\epsilon_t$ values.
+
+An important consideration when estimating a regression with ARMA errors is that all of the variables in the model must first be stationary. Thus, we first have to check that $y_t$ and all of the predictors appear to be stationary. If we estimate the model when any of these are non-stationary, the estimated coefficients will not be consistent estimates (and therefore may not be meaningful). 
+
+```{r}
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = total_waste_total)) + geom_line()
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_precip)) + geom_line() +
+  geom_point(color="steelblue")
 ```
 
