@@ -1,0 +1,29 @@
+These are January 2021 values
+cpi = 825.413
+nyc_unemp = 13.30%
+avg_precip = 0.07
+avg_temp = 34.8
+cdd = 0
+cdd_diff = 0
+avg_temp_diff = -4.4
+
+February 2021 Values
+cpi = 828.156
+nyc_unemp = 12.80%
+avg_precip = 0.18
+avg_temp = 34.2
+cdd = 0
+
+March 2021 Values
+cpi = 831.067
+nyc_unemp = 11.30%
+avg_precip = 0.17
+avg_temp = 45.8
+cdd = 0.1
+
+April 2021 Values
+cpi = 836.885
+nyc_unemp = 10.90%
+avg_precip = 0.12
+avg_temp = 54.6
+cdd = 0.2
