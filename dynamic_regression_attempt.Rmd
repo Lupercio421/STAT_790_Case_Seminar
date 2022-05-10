@@ -73,8 +73,129 @@ When we estimate the parameters from the model, we need to minimize the sum of s
 An important consideration when estimating a regression with ARMA errors is that all of the variables in the model must first be stationary. Thus, we first have to check that $y_t$ and all of the predictors appear to be stationary. If we estimate the model when any of these are non-stationary, the estimated coefficients will not be consistent estimates (and therefore may not be meaningful). 
 
 ```{r}
-final_nyc_data %>% ggplot(., mapping = aes(x = month, y = total_waste_total)) + geom_line()
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = total_waste_total)) + geom_line() +
+  geom_point(color="steelblue")
 final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_precip)) + geom_line() +
   geom_point(color="steelblue")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_temp)) + geom_line() +
+  geom_point(color="steelblue")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_CDD)) + geom_line() +
+  geom_point(color="steelblue")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = cpi)) + geom_line() +
+  geom_point(color="steelblue")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = unemp_rate)) + geom_line() +
+  geom_point(color="steelblue")
+```
+```{r}
+# ?across
+# final_nyc_data %>% 
+#   across(list(~scale(.) %>% 
+#                 as.vector),
+#          vars = c("total_waste_total", "unemp_rate"))
+```
+
+## Creation of tsibble
+
+```{r smaller dataframe}
+final_nyc_data_small <-final_nyc_data %>% 
+  select(1, c(9:15))
+
+#scaling the variables
+
+```
+
+```{r staionary check}
+final_nyc_data_small %>% 
+  mutate(tw_diff1 = difference(total_waste_total, 
+                               differences = 1, 
+                               order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = tw_diff1)) + geom_line() +
+  geom_point(color="steelblue")
+
+final_nyc_data_small %>% 
+  mutate(temp_diff1 = difference(avg_temp, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = temp_diff1)) + geom_line() +
+  geom_point(color="steelblue")
+
+final_nyc_data_small %>% 
+  mutate(cdd_diff1 = difference(avg_CDD, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = cdd_diff1)) + geom_line() +
+  geom_point(color="steelblue")
+```
+
+```{r}
+final_nyc_data_small <- final_nyc_data_small%>% 
+  mutate(tw_diff1 = difference(total_waste_total, 
+                               differences = 1, 
+                               order_by = month_num),
+         temp_diff1 = difference(avg_temp, 
+                                 differences = 1, 
+                                 order_by = month_num),
+         cdd_diff1 = difference(avg_CDD, 
+                                 differences = 1, 
+                                 order_by = month_num))
+```
+
+```{r}
+nyc_ts_1 <- as_tsibble(final_nyc_data_small, index = 'month', regular = FALSE) %>% fill_gaps()
+nyc_ts_2 <- as_tsibble(final_nyc_data_small, index = 'month_num', regular = TRUE) %>% fill_gaps()
+```
+
+```{r}
+# nyc_unemployment_rate_final %>% model(ARIMA(total_waste_total ~ avg_precip))
+```
+# First attempt at a TSLM fit
+
+https://otexts.com/fpp3/forecasting.html
+https://otexts.com/fpp3/forecasting-regression.html
+
+```{r}
+fit_trends <- nyc_ts_2 %>%
+  model(
+    linear = TSLM(tw_diff1 ~ cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+    #exponential = TSLM(log(tw_diff1) ~  cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+  )
+
+
+# nyc_ts_2 %>%
+#   autoplot(nyc_ts_2) +
+#   geom_line(data = fitted(fit_trends),
+#             aes(y = .fitted, colour = .model)) +
+#   autolayer(fit_trends, alpha = 0.5, level = 95) +
+#   labs(y = "Tons",
+#        title = "Blank")
+```
+A new_data() argument needs to be made. I don't know if I should include the actual 2021 data for all 5 variables.
+```{r}
+nyc_data_small_future <- new_data(nyc_ts_2,2) %>% 
+  mutate(cpi = c(825.413,111),
+         unemp_rate = 0.1333,
+         avg_precip = 0.07,
+         avg_temp = 34.8,
+         avg_CDD = 0)
+
+nyc_data_small_future_diff <- new_data(nyc_ts_2,2) %>% 
+  mutate(cpi = 825.413,
+         unemp_rate = 0.1333,
+         avg_precip = 0.07,
+         temp_diff1 = -4.4,
+         cdd_diff1 = 0)
+
+forecast(fit_trends, new_data = nyc_data_small_future) %>% 
+  autoplot(total_waste_total) + labs(y = "Total Tonnage")
+```
+
+```{r}
+nyc_ts_2 %>% autoplot(total_waste_total)
 ```
 
