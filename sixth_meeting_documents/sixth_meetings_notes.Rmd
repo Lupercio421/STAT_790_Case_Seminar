@@ -173,13 +173,24 @@ If i ever need to difference the data again:
 #   tsibble::fill_gaps()
 ```
 
+## ARIMA(0,1,2) with a constant, seasonal parameter and period = 12
+
+```{r}
+bx_arima012_cons_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ 1 + 
+                                                                   pdq(0,1,2) + 
+                                                                   PDQ(0,0,1, period = 12)))
+```
+
+
 ## ARIMA(0,1,2) with a seasonal parameter and period = 12
 
 More [information](https://fable.tidyverts.org/reference/ARIMA.html) on the parameter selection. 
 
 ### This is the one I like the most
 ```{r ARIMA fit}
-bx_arima012_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ pdq(0,1,2) + PDQ(0,0,1, period = 12)))
+bx_arima012_001_12 <- bx_ts %>% model(bx_arima012_001_12 = ARIMA(total_waste ~ 1 + 
+                                                                   pdq(0,1,2) + 
+                                                                   PDQ(0,0,1, period = 12)))
 bx_arima012_001_12 %>% gg_tsresiduals(lag = 36)
 bx_arima012_001_12 %>% report()
 ```
@@ -246,6 +257,24 @@ bx_arima011_001_12 %>% report
 ```
 
 ARIMA(total_waste ~ 1 + pdq(0,0,0))
+
+## ARIMA(0,1,1) with constant, MA() seasonal parameter and period = 12
+
+```{r}
+bx_arima011_cons_001_12 <- bx_ts %>% model(bx_arima011_cons_001_12 = ARIMA(total_waste ~ 1 + 
+                                                                             pdq(0,1,1) + 
+                                                                             PDQ(0,0,1, period = 12)))
+```
+
+
+## ARIMA(0,1,1) with constant, AR() seasonal parameter and period = 12
+
+```{r}
+bx_arima011_cons_100_12 <- bx_ts %>% model(bx_arima011_cons_100_12 = ARIMA(total_waste ~ 1 + 
+                                                                   pdq(0,1,1) + 
+                                                                   PDQ(1,0,0, period = 12)))
+```
+
 
 ## Creating the final fitted model with 5 ARIMA models
 
