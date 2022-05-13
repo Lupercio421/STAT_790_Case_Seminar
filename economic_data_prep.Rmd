@@ -34,7 +34,7 @@ NYS_unem <- NYUR %>%
 ```
 
 # NYC Unemployment Rate
-
+https://statistics.labor.ny.gov/laus.asp
 https://statistics.labor.ny.gov/laus.asp
 Not seasonaly adjusted - https://statistics.labor.ny.gov/lstechseas.shtm
 https://www.bls.gov/regions/new-york-new-jersey/data/xg-tables/ro2xglausnyc.htm
@@ -69,6 +69,8 @@ nyc_unemployment_rate_final <- nyc_unemployment_rate2 %>%
 ```
 
 # NYS CPI
+
+https://www.bls.gov/regions/new-york-new-jersey/data/xg-tables/ro2xgcpiny1967.htm
 
 ```{r}
 nys_cpi <- read_excel("external_datasets/consumer_price_index.xlsx", 
