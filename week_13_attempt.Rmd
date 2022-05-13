@@ -1,0 +1,487 @@
+---
+title: "Dynamic Regression"
+author: "Daniel L."
+date: "5/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(RSocrata)
+library(tsfknn)
+library(fpp3)
+library(tsibble)
+library(tseries)
+library(feasts)
+library(timetk)
+library(modeltime)
+library(readr)
+library(zoo)
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\NYC_waste_tonnage.Rdata")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_datasets\\weather_data.Rdata")
+```
+
+```{r}
+#inner_join(DSNY_NYC, weather_data)
+```
+
+# CPI Data and Unemployment Data
+
+```{r CPI}
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\external_datasets\\economic_variables.Rdata")
+```
+ 
+# Filter Weather Data: Jan '05 - Dec '20
+
+```{r}
+nyc_weather_data <- weather_data %>% 
+  filter(date >= '2005-01-01' & date <= '2020-12-01') %>% 
+  rename(month = 1)
+```
+
+# Joining all the datasets
+
+```{r}
+# Joining weather and cpi data
+weather_cpi_data <- inner_join(nyc_weather_data, nys_cpi_final, by = 'month')
+
+# Joining weather/cpi data and unemployment rate
+weather_cpi_unemp <- inner_join(weather_cpi_data, nyc_unemployment_rate_final, by = 'month')
+
+#final join
+final_nyc_data <- inner_join(DSNY_NYC, weather_cpi_unemp, by = 'month') 
+
+final_nyc_data <- final_nyc_data %>%
+  mutate(month_num = seq.int(nrow(DSNY_NYC)))
+```
+
+# Final Dataset
+```{r}
+final_nyc_data %>% 
+  select(1, c(9:14))
+```
+
+# Dynamic Regression
+
+When we estimate the parameters from the model, we need to minimize the sum of squared $\epsilon_t$ values.
+
+An important consideration when estimating a regression with ARMA errors is that all of the variables in the model must first be stationary. Thus, we first have to check that $y_t$ and all of the predictors appear to be stationary. If we estimate the model when any of these are non-stationary, the estimated coefficients will not be consistent estimates (and therefore may not be meaningful). 
+
+```{r}
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = total_waste_total)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "Total Waste",
+       title = "Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_precip)) + geom_line() +
+  geom_point(color="steelblue")+ 
+  labs(x = "Month",
+       y = "Average Precipitation",
+       title = "Central Park Average Precipitation",
+       subtitle = "Jan '05 - Dec '20")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_temp)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "Average Temperature",
+       title = "Central Park Average Temperature",
+       subtitle = "Jan '05 - Dec '20")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = avg_CDD)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "CDD",
+       title = "Central Park Average CDD",
+       subtitle = "Jan '05 - Dec '20")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = cpi)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "CPI",
+       title = "NY-NJ Consumer Price Index",
+       subtitle = "Jan '05 - Dec '20")
+final_nyc_data %>% ggplot(., mapping = aes(x = month, y = unemp_rate)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "Unemployment Rate",
+       title = "NYC Unemployment Rate",
+       subtitle = "Jan '05 - Dec '20")
+```
+```{r}
+# ?across
+# final_nyc_data %>% 
+#   across(list(~scale(.) %>% 
+#                 as.vector),
+#          vars = c("total_waste_total", "unemp_rate"))
+```
+
+## Creation of tsibble
+
+```{r smaller dataframe}
+final_nyc_data_small <- final_nyc_data %>% 
+  select(1, c(9:15))
+
+#scaling the variables
+
+```
+
+```{r staionary check}
+# Total Waste
+
+final_nyc_data_small %>% 
+  mutate(tw_diff1 = difference(total_waste_total, 
+                               differences = 1, 
+                               order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = tw_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced Total Waste Values",
+       subtitle = "Jan '05 - Dec '20")
+
+# Average Temperature
+
+final_nyc_data_small %>% 
+  mutate(temp_diff1 = difference(avg_temp, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = temp_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced Temperature Values",
+       subtitle = "Jan '05 - Dec '20")
+
+# CDD
+
+final_nyc_data_small %>% 
+  mutate(cdd_diff1 = difference(avg_CDD, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = cdd_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced CDD Values",
+       subtitle = "Jan '05 - Dec '20")
+
+# Precipitation
+
+final_nyc_data_small %>% 
+  mutate(avg_precip_diff1 = difference(avg_precip, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = avg_precip_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced Precipitation Values",
+       subtitle = "Jan '05 - Dec '20")
+
+# CPI
+final_nyc_data_small %>% 
+  mutate(cpi_diff1 = difference(cpi, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = cpi_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced CPI Values",
+       subtitle = "Jan '05 - Dec '20")
+
+# Unemployment Rate
+final_nyc_data_small %>% 
+  mutate(unemp_diff1 = difference(unemp_rate, 
+                                 differences = 1, 
+                                 order_by = month_num)) %>% 
+  ggplot(., 
+         mapping = aes(x = month, 
+                       y = unemp_diff1)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       title = "Differenced CPI Values",
+       subtitle = "Jan '05 - Dec '20")
+```
+
+```{r}
+final_nyc_data_small <- final_nyc_data_small %>% 
+  mutate(tw_diff1 = difference(total_waste_total, 
+                               differences = 1, 
+                               order_by = month_num),
+         temp_diff1 = difference(avg_temp, 
+                                 differences = 1, 
+                                 order_by = month_num),
+         cdd_diff1 = difference(avg_CDD, 
+                                 differences = 1, 
+                                 order_by = month_num),
+         avg_precip_diff1 = difference(avg_precip, 
+                                 differences = 1, 
+                                 order_by = month_num),
+         cpi_diff1 = difference(cpi, 
+                                 differences = 1, 
+                                 order_by = month_num),
+         unemp_diff1 = difference(unemp_rate, 
+                                 differences = 1, 
+                                 order_by = month_num))
+         
+```
+
+```{r}
+nyc_ts_1 <- as_tsibble(final_nyc_data_small, index = 'month', regular = FALSE) %>% fill_gaps()
+nyc_ts_2 <- as_tsibble(final_nyc_data_small, index = 'month_num', regular = TRUE) %>% fill_gaps(tw_diff1 = 0L)
+
+as_tsibble(final_nyc_data_small, index = 'month_num', regular = TRUE) %>% fill_gaps(tw_diff1 = 0L) %>% tidyr::fill(tw_diff1, 0)
+
+as_tsibble(final_nyc_data_small, index = 'month_num', regular = TRUE) %>% fill_gaps(cdd_diff1 = 0, .full = TRUE)
+```
+
+```{r}
+save.image("dyna_regress_prep.Rdata")
+#nyc_ts_2 %>% model(ARIMA(total_waste_total ~ avg_precip))
+```
+
+# First attempt at a TSLM fit
+
+https://otexts.com/fpp3/forecasting.html
+https://otexts.com/fpp3/forecasting-regression.html
+
+The TSLM() function fits a linear regression model to time series data. It is similar to the lm() function which is widely used for linear models, but TSLM() provides additional facilities for handling time series.
+
+```{r}
+lin_model_fit <- nyc_ts_2 %>%
+  model(
+    linear = TSLM(tw_diff1 ~ cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+    # exponential = TSLM(log(tw_diff1) ~  cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+  )
+report(lin_model_fit)
+# fit_trends
+# 
+# nyc_ts_2 %>%
+#   autoplot(total_waste_total) +
+#   geom_line(data = fitted(fit_trends),
+#             aes(y = .fitted, colour = .model)) +
+#   autolayer(fit_trends, alpha = 0.5, level = 95) +
+#   labs(y = "Tons",
+#        title = "Blank")
+```
+
+#### Adjusted R2 = 0.1336
+Oddly enough, adding the trend() parameter decreased the adjusted $R^2$
+
+A new_data() argument needs to be made. I don't know if I should include the actual 2021 data for all 5 variables.
+
+```{r}
+augment(lin_model_fit) %>% 
+  ggplot(aes(x = month_num)) + 
+  geom_line(aes(y = tw_diff1, colour = "Data")) + 
+  geom_line(aes(y = .fitted, colour = "Fitted")) + 
+  labs(x = "Month Number"
+       ,y = "Differenced Total Waste Values",
+       title = "Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20") +
+  scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
+  guides(colour = guide_legend(title = NULL))
+
+augment(lin_model_fit) %>% 
+  ggplot(aes(x = month_num, y = .fitted)) + 
+  geom_point() +
+  labs(
+    y = "Fitted (predicted values)",
+    x = "Data (actual values)",
+    title = "Total Waste Tonnage Linear Model"
+  ) + geom_abline(intercept = 0, slope = 1)
+```
+
+# Linear model attempt 2
+
+```{r}
+lin_model_fit2 <- nyc_ts_2 %>%
+  model(
+    linear = TSLM(total_waste_total ~ cpi + unemp_rate + avg_precip + avg_temp + avg_CDD)
+    # exponential = TSLM(log(tw_diff1) ~  cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+  )
+report(lin_model_fit2)
+```
+
+#### Adjusted R2 = 0.4161
+
+```{r}
+augment(lin_model_fit2) %>% 
+  ggplot(aes(x = month_num)) + 
+  geom_line(aes(y = total_waste_total, colour = "Data")) + 
+  geom_line(aes(y = .fitted, colour = "Fitted")) + 
+  labs(x = "Month Number"
+       ,y = "Total Waste Values",
+       title = "Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20") +
+  scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
+  guides(colour = guide_legend(title = NULL))
+
+augment(lin_model_fit2) %>% 
+  ggplot(aes(x = total_waste_total, y = .fitted)) + 
+  geom_point() +
+  labs(
+    y = "Fitted (predicted values)",
+    x = "Data (actual values)",
+    title = "Total Waste Tonnage Linear Model") + 
+  geom_abline(intercept = 0, slope = 1)
+```
+## Evaluating the Regression Model
+
+It is always a good idea to check whether the residuals are normally distributed. As we explained earlier, this is not essential for forecasting, but it does make the calculation of prediction intervals much easier.
+
+```{r residuals}
+lin_model_fit2 %>% 
+  gg_tsresiduals()
+```
+
+```{r}
+augment(lin_model_fit2) %>% 
+  features(.innov, ljung_box, lag = 10, dof = 5)
+```
+
+We see a spike at lag = 1 and a significant Ljung-Box test at the 5% level.
+
+### Residual Plots against predictors
+
+```{r}
+nyc_ts_2 %>%
+  left_join(residuals(lin_model_fit2), by = "month_num") %>%
+  pivot_longer(avg_precip:unemp_rate,
+               names_to = "regressor", values_to = "x") %>%
+  ggplot(aes(x = x, y = .resid)) +
+  geom_point() +
+  facet_wrap(. ~ regressor, scales = "free_x") +
+  labs(y = "Residuals", x = "")
+```
+```{r}
+augment(lin_model_fit2) %>%
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point() + labs(x = "Fitted", y = "Residuals")+ 
+  geom_abline(intercept = 0, slope = 0)
+```
+
+The random scatter suggests the errors are homoscedastic.
+
+## Linear Model attempt 2 with trend
+
+```{r}
+lin_model_fit2_trend <- nyc_ts_2 %>%
+  model(
+    linear = TSLM(total_waste_total ~ cpi + unemp_rate + avg_precip + avg_temp + avg_CDD + trend())
+    # exponential = TSLM(log(tw_diff1) ~  cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+  )
+report(lin_model_fit2)
+print("------------")
+report(lin_model_fit2_trend)
+```
+
+There is an average upward trend of 670
+
+```{r}
+augment(lin_model_fit2_trend) %>% 
+  ggplot(aes(x = month_num)) + 
+  geom_line(aes(y = total_waste_total, colour = "Data")) + 
+  geom_line(aes(y = .fitted, colour = "Fitted")) + 
+  labs(x = "Month Number"
+       ,y = "Total Waste Values",
+       title = "Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20") +
+  scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
+  guides(colour = guide_legend(title = NULL))
+```
+```{r}
+augment(lin_model_fit2_trend) %>% 
+  ggplot(aes(x = total_waste_total, y = .fitted)) + 
+  geom_point() +
+  labs(
+    y = "Fitted (predicted values)",
+    x = "Data (actual values)",
+    title = "Total Waste Tonnage Linear Model") + 
+  geom_abline(intercept = 0, slope = 1)
+```
+## Selecting Predictors
+
+Instead, we will use a measure of predictive accuracy.
+
+```{r}
+glance(lin_model_fit2) %>%
+  select(adj_r_squared, CV, AIC, AICc, BIC)
+glance(lin_model_fit2_trend) %>%
+  select(adj_r_squared, CV, AIC, AICc, BIC)
+```
+
+We compare these values against the corresponding values from other models. For the CV, AIC, AICc and BIC measures, we want to find the model with the lowest value; for Adjusted $R^2$, we seek the model with the highest value. The adjusted $R^2$ it is not a good measure of the predictive ability of a model. It measures how well the model fits the historical data, but not how well the model will forecast future data.
+
+In addition, $R^2$ does not allow for “degrees of freedom”. Adding any variable tends to increase the value of $R^2$ even if that variable is irrelevant. For these reasons, forecasters should not use $R^2$ to determine whether a model will give good predictions, as it will lead to overfitting.
+
+In this case, the trended model beats out the non-trend total waste values model
+
+Consequently, we recommend that one of the AICc, AIC, or CV statistics be used, each of which has forecasting as their objective. If the value of T is large enough, they will all lead to the same model. In most of the examples in this book, we use the AICc value to select the forecasting model.
+
+## Forecasts
+
+Ex-post forecasts are those that are made using later information on the predictors. For example, ex-post forecasts of consumption may use the actual observations of the predictors, once these have been observed''
+
+```{r}
+# forecast(fit_trends2_trend) %>% autoplot(nyc_ts_2)
+```
+
+We should note that prediction intervals for scenario based forecasts do not include the uncertainty associated with the future values of the predictor variables. They assume that the values of the predictors are known in advance.
+
+
+```{r}
+nyc_data_small_future <- new_data(nyc_ts_2, 4) %>% 
+  mutate(cpi = c(825.413,111, 831.067, 836.885),
+         unemp_rate = c(0.1333,0.1280, 0.1130, 0.1090),
+         avg_precip = c(0.07, 0.18, 0.17, 0.12),
+         avg_temp = c(34.8, 34.2, 45.8, 54.6),
+         avg_CDD = 0, 0, 0.1, 0.2)
+
+nyc_data_small_future_diff <- new_data(nyc_ts_2,4) %>% 
+  mutate(cpi = c(825.413,111, 831.067, 836.885),
+         unemp_rate = c(0.1333,0.1280, 0.1130, 0.1090),
+         avg_precip = c(0.07, 0.18, 0.17, 0.12),
+         temp_diff1 = c(-4.4, -0.6, 11.6, 8.8),
+         cdd_diff1 = c(0,0,0.1, 0.1))
+```
+
+```{r}
+forecast(lin_model_fit2, new_data = nyc_data_small_future) %>% 
+  autoplot(nyc_ts_1) +
+  labs(x  = "Month Number",
+       y = "Total Tonnage",
+       title = "Forecasts of the Linear Model",
+       subtitle = "Jan '05 - Dec '20")
+
+forecast(lin_model_fit2_trend, new_data = nyc_data_small_future) %>% 
+  autoplot(nyc_ts_1) + 
+  labs(x  = "Month Number",
+       y = "Total Tonnage",
+       title = "Forecasts of the Linear Model with Trend",
+       subtitle = "Jan '05 - Dec '20")
+```
+
+```{r}
+save.image("linear_model.Rdata")
+```
+
+# ETS fit
+
+```{r}
+# nyc_ts_2 %>% 
+#   select(-c(tw_diff1, temp_diff1, cdd_diff1))
+#   model(ETS = ETS(tw_diff1)) %>% 
+#   generate(times = 5) %>% 
+#   autoplot() + autolayer(nyc_ts_2)
+```
+
