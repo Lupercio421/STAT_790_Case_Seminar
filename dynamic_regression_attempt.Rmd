@@ -210,7 +210,7 @@ augment(fit_trends) %>%
   ) + geom_abline(intercept = 0, slope = 1)
 ```
 
-### Linear model attempt 2
+# Linear model attempt 2
 
 ```{r}
 fit_trends2 <- nyc_ts_2 %>%
@@ -236,7 +236,7 @@ augment(fit_trends2) %>%
   guides(colour = guide_legend(title = NULL))
 
 augment(fit_trends2) %>% 
-  ggplot(aes(x = month_num, y = .fitted)) + 
+  ggplot(aes(x = total_waste_total, y = .fitted)) + 
   geom_point() +
   labs(
     y = "Fitted (predicted values)",
@@ -244,7 +244,7 @@ augment(fit_trends2) %>%
     title = "Total Waste Tonnage Linear Model") + 
   geom_abline(intercept = 0, slope = 1)
 ```
-## Evaluating the Regrssion Model
+## Evaluating the Regression Model
 
 It is always a good idea to check whether the residuals are normally distributed. As we explained earlier, this is not essential for forecasting, but it does make the calculation of prediction intervals much easier.
 
@@ -274,41 +274,109 @@ nyc_ts_2 %>%
 ```{r}
 augment(fit_trends2) %>%
   ggplot(aes(x = .fitted, y = .resid)) +
-  geom_point() + labs(x = "Fitted", y = "Residuals")
+  geom_point() + labs(x = "Fitted", y = "Residuals")+ 
+  geom_abline(intercept = 0, slope = 0)
 ```
 
 The random scatter suggests the errors are homoscedastic.
 
+## Linear Model attempt 2 with trend
+
 ```{r}
-nyc_data_small_future <- new_data(nyc_ts_2,2) %>% 
+fit_trends2_trend <- nyc_ts_2 %>%
+  model(
+    linear = TSLM(total_waste_total ~ cpi + unemp_rate + avg_precip + avg_temp + avg_CDD + trend())
+    # exponential = TSLM(log(tw_diff1) ~  cpi + unemp_rate + avg_precip + temp_diff1 + cdd_diff1)
+  )
+report(fit_trends2)
+print("------------")
+report(fit_trends2_trend)
+```
+
+There is an average upward trend of 670
+
+```{r}
+augment(fit_trends2_trend) %>% 
+  ggplot(aes(x = month_num)) + 
+  geom_line(aes(y = total_waste_total, colour = "Data")) + 
+  geom_line(aes(y = .fitted, colour = "Fitted")) + 
+  labs(x = "Month Number"
+       ,y = "Total Waste Values",
+       title = "Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20") +
+  scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
+  guides(colour = guide_legend(title = NULL))
+```
+```{r}
+augment(fit_trends2_trend) %>% 
+  ggplot(aes(x = total_waste_total, y = .fitted)) + 
+  geom_point() +
+  labs(
+    y = "Fitted (predicted values)",
+    x = "Data (actual values)",
+    title = "Total Waste Tonnage Linear Model") + 
+  geom_abline(intercept = 0, slope = 1)
+```
+## Selecting Predictors
+
+Instead, we will use a measure of predictive accuracy.
+
+```{r}
+glance(fit_trends2) %>%
+  select(adj_r_squared, CV, AIC, AICc, BIC)
+glance(fit_trends2_trend) %>%
+  select(adj_r_squared, CV, AIC, AICc, BIC)
+```
+
+We compare these values against the corresponding values from other models. For the CV, AIC, AICc and BIC measures, we want to find the model with the lowest value; for Adjusted $R^2$, we seek the model with the highest value. The adjusted $R^2$ it is not a good measure of the predictive ability of a model. It measures how well the model fits the historical data, but not how well the model will forecast future data.
+
+In addition, $R^2$ does not allow for “degrees of freedom”. Adding any variable tends to increase the value of $R^2$ even if that variable is irrelevant. For these reasons, forecasters should not use $R^2$ to determine whether a model will give good predictions, as it will lead to overfitting.
+
+In this case, the trended model beats out the non-trend total waste values model
+
+Consequently, we recommend that one of the AICc, AIC, or CV statistics be used, each of which has forecasting as their objective. If the value of T is large enough, they will all lead to the same model. In most of the examples in this book, we use the AICc value to select the forecasting model.
+
+## Forecasts
+
+Ex-post forecasts are those that are made using later information on the predictors. For example, ex-post forecasts of consumption may use the actual observations of the predictors, once these have been observed''
+
+```{r}
+# forecast(fit_trends2_trend) %>% autoplot(nyc_ts_2)
+```
+
+We should note that prediction intervals for scenario based forecasts do not include the uncertainty associated with the future values of the predictor variables. They assume that the values of the predictors are known in advance.
+
+
+```{r}
+nyc_data_small_future <- new_data(nyc_ts_2, 4) %>% 
   mutate(cpi = c(825.413,111, 831.067, 836.885),
          unemp_rate = c(0.1333,0.1280, 0.1130, 0.1090),
          avg_precip = c(0.07, 0.18, 0.17, 0.12),
          avg_temp = c(34.8, 34.2, 45.8, 54.6),
          avg_CDD = 0, 0, 0.1, 0.2)
 
-nyc_data_small_future_diff <- new_data(nyc_ts_2,2) %>% 
+nyc_data_small_future_diff <- new_data(nyc_ts_2,4) %>% 
   mutate(cpi = c(825.413,111, 831.067, 836.885),
          unemp_rate = c(0.1333,0.1280, 0.1130, 0.1090),
          avg_precip = c(0.07, 0.18, 0.17, 0.12),
          temp_diff1 = c(-4.4, -0.6, 11.6, 8.8),
          cdd_diff1 = c(0,0,0.1, 0.1))
 
-forecast(fit_trends, new_data = nyc_data_small_future) %>% 
-  autoplot(total_waste_total) + labs(y = "Total Tonnage")
+forecast(fit_trends2_trend, new_data = nyc_data_small_future) %>% 
+  autoplot(nyc_ts_1) + labs(y = "Total Tonnage")
 ```
 
 ```{r}
-nyc_ts_2 %>% autoplot(total_waste_total)
+# nyc_ts_2 %>% autoplot(total_waste_total)
 ```
 
 # ETS fit
 
 ```{r}
-nyc_ts_2 %>% 
-  select(-c(tw_diff1, temp_diff1, cdd_diff1))
-  model(ETS = ETS(tw_diff1)) %>% 
-  generate(times = 5) %>% 
-  autoplot() + autolayer(nyc_ts_2)
+# nyc_ts_2 %>% 
+#   select(-c(tw_diff1, temp_diff1, cdd_diff1))
+#   model(ETS = ETS(tw_diff1)) %>% 
+#   generate(times = 5) %>% 
+#   autoplot() + autolayer(nyc_ts_2)
 ```
 
