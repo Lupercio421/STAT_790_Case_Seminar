@@ -95,3 +95,211 @@ DSNY_NYC_zoo_ts <- ts(final_nyc_data_small[,2],
 autoplot(as.zoo(DSNY_NYC_zoo_ts))
 ```
 
+## $\text{ARIMA(0,0,0)}$ with constant
+${ARIMA(0,0,0)}$
+
+```{r}
+nyc_arima000_fit_cons <- nyc_ts_2 %>% 
+  model(arima000_constant = ARIMA(total_waste_total ~ 1 + pdq(0,0,0)))
+
+zoo_arima000_fit <- arima(DSNY_NYC_zoo_ts, order = 1 + c(0,0,0))
+res_arima000 <- zoo_arima000_fit$residuals
+acf(res_arima000, lag.max = 36)
+pacf(res_arima000, lag.max = 36)
+accuracy(nyc_arima000_fit_cons)[4]
+```
+
+RMSE = 20560.3, The first significant lag in the ACF plot is lag 4. The first significant lag in the PACF plot is also lag 4. Both these lags are negative, which indicate the use of an MA() argument. The seasonal lags are once again present in both plots. In the PACF() plot, lag 8 is negative and significant.
+
+## $\text{ARIMA(0,0,4)}$ with constant
+${ARIMA(0,0,4)}$
+
+```{r}
+nyc_arima004_fit_cons <- nyc_ts_2 %>% 
+  model(arima004_constant = ARIMA(total_waste_total ~ 1 + 
+                                    pdq(0,0,4)))
+        
+zoo_arima004_fit <- arima(DSNY_NYC_zoo_ts, 
+                          order = 1 + c(0,0,4))
+#names(zoo_arima000_fit)
+res_arima004 <- zoo_arima004_fit$residuals
+acf(res_arima004, lag.max = 36)
+pacf(res_arima004, lag.max = 36)
+accuracy(nyc_arima004_fit_cons)[4]
+```
+
+RMSE = 17602.62. Seasonal lags worth exploring. In the PACF plot, lag = 9 is negatively autocorrelated and significant
+
+## $\text{ARIMA(0,0,4)(1,0,0)}$ with constant and seasonal
+$ARIMA(0,0,4)(1,0,0)_{12}$
+
+```{r}
+nyc_arima004_100_seasonal_fit_cons <- nyc_ts_2 %>% 
+  model(arima004_100_constant = ARIMA(total_waste_total ~ 1 + 
+                                    pdq(0,0,4) + 
+                                    PDQ(1,0,0, 
+                                        period = 12)))
+        
+zoo_arima004_100_seasonalfit <- arima(DSNY_NYC_zoo_ts, 
+                          order = 1 + c(0,0,4),
+                          seasonal = list(order = c(1, 0L, 0L), 
+                                          period = 12))
+#names(zoo_arima000_fit)
+res_arima004_100 <- zoo_arima004_100_seasonalfit$residuals
+acf(res_arima004_100, lag.max = 36)
+pacf(res_arima004_100, lag.max = 36)
+accuracy(nyc_arima004_100_seasonal_fit_cons)[4]
+```
+
+RMSE = 13926.64. Most of the lags are now bounded between -0.15 and 0.15. In the PACF, the first significant lag is lag = 9, which is barely significant and negative. Lag = 12 is also significant. 
+
+we can also work with the differenced values, we will create some models with them
+
+## $\text{ARIMA(0,1,0)}$ with constant
+
+${ARIMA(0,1,0)}$
+
+```{r}
+nyc_arima010_fit_cons <- nyc_ts_2 %>% 
+  model(arima010_constant = ARIMA(total_waste_total ~ 1 + pdq(0,1,0)))
+
+zoo_arima010_fit <- arima(DSNY_NYC_zoo_ts, 
+                          order = 1 + c(0,1,0))
+
+res_arima010 <- zoo_arima010_fit$residuals
+acf(res_arima010, lag.max = 36)
+pacf(res_arima010, lag.max = 36)
+accuracy(nyc_arima010_fit_cons)[4]
+```
+
+RMSE = 21209.02. In the ACF plot, the seasonal lags are once again significant. Looking at the PACF, the first significant lag is 4, and is negatively autocorrelated.
+
+## $\text{ARIMA(0,1,4)(1,0,0)}$ with constant and seasonal
+
+${ARIMA(0,1,4)(1,0,0)[12]}$
+
+```{r}
+nyc_arima014_100_fit_cons <- nyc_ts_2 %>% 
+  model(arima014_100_constant = ARIMA(total_waste_total ~ 1 + 
+                                        pdq(0,1,4) + 
+                                        PDQ(1,0,0, 
+                                            period = 12)))
+
+zoo_arima014_100_fit <- arima(DSNY_NYC_zoo_ts, 
+                              order = 1 + c(0,1,4),
+                              seasonal = list(order = c(1,0L,0L),
+                                              period = 12))
+res_arima014_100 <- zoo_arima014_100_fit$residuals
+acf(res_arima014_100, lag.max = 36)
+pacf(res_arima014_100, lag.max = 36)
+accuracy(nyc_arima014_100_fit_cons)[4]
+```
+
+RMSE = 13816.72. In both plots, lag = 11. Is the lag that is the most autocorrelated.
+The RMSE has decreasaed when compared to $ARIMA(0,0,4)(1,0,0)_{12}$
+
+## Auto-arima 
+
+For our final model, we will look and compare the results of an auto-arima model from the feasts package.
+
+```{r}
+nyc_auto_arima_fit_cons <- nyc_ts_2 %>% 
+  model(stepwise = ARIMA(total_waste_total),
+        search = ARIMA(total_waste_total, 
+                       stepwise = FALSE, 
+                       approximation = FALSE))
+
+accuracy(nyc_auto_arima_fit_cons)[1:4]
+```
+
+The stepwise model has RMSE = 16493.55, while the search model has RMSE = 16990.13. We will take a look at the ACF and PACF plots of the stepwise model.
+
+```{r}
+nyc_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
+print("--------------")
+nyc_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
+The AICc, AIC, BIC metrics for the stepwise model is barely greater than the metrics for the search model. 
+
+## $\text{ARIMA(2,1,4)}$ with constant from auto-arima
+
+${ARIMA(2,1,4)}$
+
+```{r}
+nyc_arima214_fit_cons <- nyc_ts_2 %>% 
+  model(arima214_constant = ARIMA(total_waste_total ~ 1 + 
+                                        pdq(2,1,4)))
+
+zoo_arima214_fit <- arima(DSNY_NYC_zoo_ts, 
+                              order = 1 + c(2,1,4))
+
+res_arima214 <- zoo_arima214_fit$residuals
+acf(res_arima214, lag.max = 36)
+pacf(res_arima214, lag.max = 36)
+accuracy(nyc_arima214_fit_cons)[4]
+```
+
+# Summary of Models
+\
+$ARIMA(0,0,4)(1,0,0)_{12}$ has RMSE = 13926 \
+${ARIMA(0,1,4)(1,0,0)[12]}$ has RMSE = 13816 \ 
+${ARIMA(2,1,4)}$ is the step model and has RMSE = 16936.99 \
+
+# Dynamic Regression models with ARIMA models from before
+\
+## $ARIMA(0,0,4)(1,0,0)_{12}$
+\
+```{r}
+dr_diff_cons_fit1 <- nyc_ts_2 %>% 
+  model(dynam_regress_diff1 = ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + 
+                avg_precip_diff1 + temp_diff1 + 
+                cdd_diff1 +
+                trend() +
+                pdq(0,0,4) + 
+                PDQ(1,0,0,
+                    period = 12)))
+
+report(dr_diff_cons_fit1)
+accuracy(dr_diff_cons_fit1)
+```
+When adding the trend() argument, the coefficients of the majority of the predictors and arima errors decrease. 
+
+## ${ARIMA(0,1,4)(1,0,0)[12]}$
+
+```{r}
+dr_diff_cons_fit2 <- nyc_ts_2 %>% 
+  model(dynam_regress_diff2 = ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + 
+                avg_precip_diff1 + temp_diff1 + 
+                cdd_diff1 +
+                pdq(0,1,4) + 
+                PDQ(1,0,0,
+                    period = 12)))
+
+report(dr_diff_cons_fit2)
+accuracy(dr_diff_cons_fit2)
+```
+
+Was given an error: Warning: Provided exogenous regressors are rank deficient, removing regressors: `trend()`
+Warning: 1 error encountered for dynam_regress_diff2
+[1] system is computationally singular: reciprocal condition number = 2.10254e-16
+
+https://stats.stackexchange.com/questions/76488/error-system-is-computationally-singular-when-running-a-glm
+
+## ${ARIMA(2,1,4)}$
+
+```{r}
+dr_diff_cons_fit3 <- nyc_ts_2 %>% 
+  model(dynam_regress_diff3 = ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + 
+                avg_precip_diff1 + temp_diff1 +
+                cdd_diff1 +
+                pdq(2,1,4)))
+
+report(dr_diff_cons_fit3)
+accuracy(dr_diff_cons_fit3)
+```
+
+When including the trend() parameter, I get this error: Warning: Provided exogenous regressors are rank deficient, removing regressors: `trend()`
+And this error is also returned:
+Warning in sqrt(diag(best$var.coef)) : NaNs produced
+
