@@ -46,6 +46,28 @@ load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\data_prep.
 #C:\Users\Daniel\Desktop\R\STAT_790\STAT_790_Case_Seminar\sixth_meeting_documents\meeting_6.RData
 ```
 
+Creating a general time plot
+
+```{r}
+DSNY_third_bronx %>% 
+  ggplot(., mapping = aes(x = month, y = total_waste)) + geom_line() +
+  geom_point(color="steelblue") + 
+  labs(x = "Month",
+       y = "Total Waste",
+       title = "Bronx Total Waste Tonnage",
+       subtitle = "Jan '05 - Dec '20")
+```
+
+
+```{r kpss test}
+#total waste values
+bx_ts2 %>% features(total_waste, unitroot_kpss)
+
+#differenced values
+bx_ts2 %>% features(diff1, unitroot_kpss)
+```
+
+
 
 ## Creating models with zoo() and the arima package from stats()
 
@@ -93,6 +115,45 @@ acf(res_arima000_seasonal, lag.max = 36)
 pacf(res_arima000_seasonal, lag.max = 36)
 accuracy(bx_arima000_fit_cons_seasonal)
 ```
+
+### $\text{ARIMA(0,0,4)}$ with constant
+
+$\text{ARIMA(0,0,4)$
+
+```{r}
+bx_arima004_fit_cons <- bx_ts2 %>% 
+  model(arima004_constant = ARIMA(total_waste ~ 1 + pdq(0,0,4)))
+zoo_arima004_fit <- arima(DSNY_BX_zoo_ts, 
+                          order = 1 + c(0,0,4)) #the PACF plot return the same values
+                          #with or without the include.mean = parameter
+res_arima004 <- zoo_arima004_fit$residuals
+acf(res_arima004, lag.max = 36)
+pacf(res_arima004, lag.max = 36)
+accuracy(bx_arima004_fit_cons)[4]
+#autoplot(as.zoo(difference(DSNY_BX_zoo_ts),1))
+```
+
+RMSE = 2685.318.
+
+### $\text{ARIMA(0,0,4)(1,0,0)[12]}$ with constant
+
+$ARIMA(0,0,4)(1,0,0)[12]$
+
+```{r}
+bx_arima004_100_fit_cons <- bx_ts2 %>% 
+  model(arima004_100_constant = ARIMA(total_waste ~ 1 + pdq(0,0,4) + 
+                                    PDQ(1,0,0, period = 12)))
+zoo_arima004_100_fit <- arima(DSNY_BX_zoo_ts, 
+                          order = 1 + c(0,0,4),
+                          seasonal = list(order = c(1,0L,0L), period = 12)) #the PACF plot return the same values
+                          #with or without the include.mean = parameter
+res_arima004_100 <- zoo_arima004_100_fit$residuals
+acf(res_arima004_100, lag.max = 36)
+pacf(res_arima004_100, lag.max = 36)
+accuracy(bx_arima004_100_fit_cons)[4]
+```
+
+RMSE = 2304.198
 
 ### $\text{ARIMA(0,1,0)}$ with constant/mean
 
@@ -244,5 +305,40 @@ accuracy(bx_arima011_cons_100_12)
 
 This model returns the lowest RMSE. The seasonal lags in th PACF are no longer significant. All non-seasonal lags, except for lag = 11, are insignificant.  
 
+## Auto-arima
+
+```{r}
+bx_auto_arima_fit_cons <- bx_ts2 %>% 
+  model(stepwise = ARIMA(total_waste),
+        search = ARIMA(total_waste, 
+                       stepwise = FALSE, 
+                       approximation = FALSE))
+
+
+accuracy(bx_auto_arima_fit_cons)[1:4]
+```
+
+```{r}
+bx_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
+print("--------------")
+bx_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
+```{r}
+bx_arima003_cons <- bx_ts %>% 
+  model(bx_arima003_cons = ARIMA(total_waste ~ 1 + 
+                                          pdq(0,0,3)))
+
+zoo_arima003_cons_fit <- arima(DSNY_BX_zoo_ts, 
+                                order = 1 + c(0,0,3))
+
+res_arima003_cons_fit <- zoo_arima003_cons_fit$residuals
+acf(res_arima003_cons_fit, lag.max = 36)
+pacf(res_arima003_cons_fit, lag.max = 36)
+accuracy(bx_arima003_cons)
+```
+
 ## In conclusion
-The models with the most promising ACF and PACF plots, and RMSE are $\text{ARIMA(0,1,1)(1,0,0)}_{12}$, $\text{ARIMA(0,0,0)(1,0,0)}_{12}$.
+The models with the most promising ACF and PACF plots, and RMSE are $ARIMA(0,1,1)(1,0,0)[12]$ has RMSE = 2341.145 \
+$ARIMA(0,0,0)(1,0,0)[12]$ has RMSE = 2481.765\
+$ARIMA(0,0,4)(1,0,0)[12]$ has RMSE = 2304.
