@@ -23,19 +23,36 @@ library(feasts)
 library(timetk)
 library(modeltime)
 library(zoo)
-load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\BK_ts_data.Rdata")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\Brooklyn_time_series\\BK_ts_data.Rdata")
 ```
 
 ```{r}
 (bk_ts) %>% 
   ggplot(mapping = aes(x = (month),
                        y = total_waste)) + 
-  geom_line() + 
+  geom_line() +
+  geom_point(color="steelblue") +
   labs(x = "Year",
        y = "Total Waste",
        title = "Brooklyn Total Waste Collected",
        subtitle = "01/2005 - 12/2020")
 ```
+
+#### GGseason
+
+```{r}
+# bx_ts2 %>% 
+#   gg_season(total_waste, labels = 'right') + labs(title = "Seasonal Plot: Bronx Total Waste Collected", y = "Total Waste")
+bk_ts2 %>% 
+  gg_season(total_waste, period = "year", labels = "right") + labs(title = "Seasonal Plot: Total Waste Collected in Brooklyn", x = "Month", y = "Total Waste")
+
+bk_ts2 %>% 
+  gg_subseries(total_waste) +
+  labs(y = "Total Waste",
+       title = "Seasonal Plot: Total Waste Collected in Brooklyn")
+```
+
+
 
 The majority of the tonnage values are bounded b/w (65000,90000).
 
@@ -279,6 +296,17 @@ accuracy(bk_auto_arima_fit_cons)[1:4]
 bk_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
 print("--------------")
 bk_auto_arima_fit_cons %>% select(.model = search) %>% report()
+```
+
+```{r}
+bk_arima303_fit_cons <- bk_ts3 %>% 
+  model(arima303_constant = ARIMA(total_waste ~ 1 + pdq(3,0,3)))
+
+zoo_arima303_fit <- arima(DSNY_BK_zoo_ts, order = 1 + c(3,0,3))
+res_arima303 <- zoo_arima303_fit$residuals
+acf(res_arima303, lag.max = 36)
+pacf(res_arima303, lag.max = 36)
+accuracy(bk_arima303_fit_cons)[4]
 ```
 
 ## Summary of models
