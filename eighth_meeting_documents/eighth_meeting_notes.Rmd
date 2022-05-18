@@ -55,7 +55,7 @@ DSNY_third_bronx %>%
   labs(x = "Month",
        y = "Total Waste",
        title = "Bronx Total Waste Collected",
-       subtitle = "Jan '05 - Dec '20")
+       subtitle = "01/2005 - 12/2020")
 ```
 
 
