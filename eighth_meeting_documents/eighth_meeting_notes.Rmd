@@ -54,7 +54,7 @@ DSNY_third_bronx %>%
   geom_point(color="steelblue") + 
   labs(x = "Month",
        y = "Total Waste",
-       title = "Bronx Total Waste Tonnage",
+       title = "Bronx Total Waste Collected",
        subtitle = "Jan '05 - Dec '20")
 ```
 
