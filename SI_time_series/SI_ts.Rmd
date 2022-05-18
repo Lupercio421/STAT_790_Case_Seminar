@@ -23,19 +23,33 @@ library(feasts)
 library(timetk)
 library(modeltime)
 library(zoo)
-load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\SI_ts_data.Rdata")
+load("C:\\Users\\Daniel\\Desktop\\R\\STAT_790\\STAT_790_Case_Seminar\\SI_time_series\\SI_ts_data.Rdata")
 ```
 
 ```{r}
 autoplot(si_ts)
 si_ts %>% 
   ggplot(mapping = aes(x = month, y = total_waste)) + geom_line() +
+  geom_point(color = "steel blue") + 
   labs(x = "Year", 
        y = "Total Waste", 
        title = "Staten Island Total Waste Collected",
        subtitle = "01/2005 - 12/2020")
 ```
 We see that the majority of the values are bounded b/w (15000, 26000)
+
+#### Seasonal Plots
+
+```{r}
+si_ts2 %>% 
+  gg_season(total_waste, period = "year", labels = "right") + labs(title = "Seasonal Plot: Total Waste Collected in Staten Island", x = "Month", y = "Total Waste")
+
+si_ts2 %>% 
+  gg_subseries(total_waste) +
+  labs(y = "Total Waste",
+       title = "Seasonal Plot: Total Waste Collected in Staten Island")
+```
+
 
 #### KPSS Test for 'total_waste'
 \
@@ -209,6 +223,7 @@ res_arima013 <- zoo_arima013_fit$residuals
 acf(res_arima013, lag.max = 36)
 pacf(res_arima013, lag.max = 36)
 accuracy(si_arima013_fit_cons)[4]
+si_arima013_fit_cons %>% report()
 ```
 
 A good sign is that our RMSE value decreased. What I don't like to see is a positive significant value on the PACF at lag = 2. Adding a p = 2 would most likely delete any progress made. But let's attempt this first.
@@ -252,6 +267,7 @@ res_arima213_100 <- zoo_arima213_100_fit$residuals
 acf(res_arima213_100, lag.max = 36)
 pacf(res_arima213_100, lag.max = 36)
 accuracy(si_arima213_100_fit_cons)[4]
+si_arima213_100_fit_cons %>% report()
 ```
 
 RMSE = 1371. All of the lags in the ACF plot appear to be within bounds. The majority of the lags in the PACF plot are within the bounds. But lags = (11,23,35) are significant. The majority of the lags are bounded b/w (-0.15, 0.20). The RMSE score is good enough? Adding more parameters would perhaps create an overfitted model.
@@ -272,13 +288,28 @@ si_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
 si_auto_arima_fit_cons %>% select(.model = search) %>% report()
 ```
 
+```{r}
+si_arima214_fit_cons <- si_ts3 %>% 
+  model(arima214_constant = ARIMA(total_waste ~ 1 + 
+                                    pdq(2,1,4)))  
+
+zoo_arima214_fit <- arima(DSNY_SI_zoo_ts, 
+                          order = 1 + c(2,1,4))
+#names(zoo_arima000_fit)
+res_arima214 <- zoo_arima214_fit$residuals
+acf(res_arima214, lag.max = 36)
+pacf(res_arima214, lag.max = 36)
+accuracy(si_arima214_fit_cons)[4]
+```
+
+
 ## Summary of the waste models
 
 ${ARIMA(0,0,3)}$ with $RMSE\approx 1251$ \
 ${ARIMA(0,0,3)(1,0,0)}_{12}$ with $RMSE\approx 1388$ \
-${ARIMA(0,1,3)}$ with $RMSE\approx 1910$ \
-${ARIMA(2,1,3)(1,0,0)_{12}}$ with ${RMSE \approx 1371.112}$
-${ARIMA(2,1,4)}$ with ${RMSE \approx 1746.309}$
+${ARIMA(0,1,3)}$ with $RMSE\approx 1910$ and $AICc=3441.12$\
+${ARIMA(2,1,3)(1,0,0)_{12}}$ with ${RMSE \approx 1371.112}$ and $AICc =3331.18$
+${ARIMA(2,1,4)}$ with ${RMSE \approx 1746.309}$ and $AICc = 3412.39$
 
 # Plots and visualizations
 
