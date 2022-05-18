@@ -31,10 +31,23 @@ qns_ts %>%
   ggplot(mapping = aes(x = (month),
                        y = total_waste)) + 
   geom_line() + 
+  geom_point(color = "steel blue") + 
   labs(x = "Year",
        y = "Total Waste",
        title = "Queens Total Waste Collected",
        subtitle = "01/2005 - 12/2020")
+```
+
+#### seasonal plots
+
+```{r}
+qns_ts2 %>% 
+  gg_season(total_waste, period = "year", labels = "right") + labs(title = "Seasonal Plot: Total Waste Collected in Queens", x = "Month", y = "Total Waste")
+
+qns_ts2 %>% 
+  gg_subseries(total_waste) +
+  labs(y = "Total Waste",
+       title = "Seasonal Plot: Total Waste Collected in Queens")
 ```
 
 ```{r}
@@ -143,6 +156,7 @@ res_arima300_seasonal <- zoo_arima300_seasonal_fit$residuals
 acf(res_arima300_seasonal, lag.max = 36)
 pacf(res_arima300_seasonal, lag.max = 36)
 accuracy(qns_arima300_fit_seasonal_cons)[4]
+qns_arima300_fit_seasonal_cons %>% report()
 ```
 
 RMSE = 4115.02. We do see a decrease in the RMSE. The first 11 lags in the PACF have low autocorrelations. Lag = 12 has significant negative autocorrelation. Lags = (11, 23, 35) continue to be significant.
@@ -219,6 +233,7 @@ res_arima011 <- zoo_arima011_fit$residuals
 acf(res_arima011, lag.max = 36)
 pacf(res_arima011, lag.max = 36)
 accuracy(qns_arima011_fit_cons)[4]
+qns_arima011_fit_cons %>% report()
 ```
 
 RMSE = 6421.289, which is a decrease from the base differenced model. The lags = (1,2,3) are still not significant and we see that lag=1 in the PACF has become positive. What we need to keep in mind is that the seasonal lags, lag = 12 is approximately 0.5. Its possible to add a seasonal difference, or add a seasonal AR(1). 
@@ -242,6 +257,7 @@ res_arima011_100 <- zoo_arima011_100_fit$residuals
 acf(res_arima011_100, lag.max = 36)
 pacf(res_arima011_100, lag.max = 36)
 accuracy(qns_arima011_100_fit_cons)[4]
+qns_arima011_100_fit_cons %>% report()
 ```
 
 A decrease in the RMSE = 4174.407. Now lag = 3 is significant and positively correlated. Lags = 11, 23, 35 are positive and significant. We also see that lag = 12, the seasonal lag is also significant. Although we see a decrease in the RMSE, the plots of PACF show mixing autocorrelations at high order lags.
@@ -265,6 +281,7 @@ res_arima311_100 <- zoo_arima311_100_fit$residuals
 acf(res_arima311_100, lag.max = 36)
 pacf(res_arima311_100, lag.max = 36)
 accuracy(qns_arima311_100_fit_cons)[4]
+qns_arima311_100_fit_cons %>% report()
 ```
 
 ## $\text{ARIMA(0,1,4)}$ with constant
@@ -324,10 +341,21 @@ print("--------------")
 qns_auto_arima_fit_cons %>% select(.model = search) %>% report()
 ```
 
+```{r}
+qns_arima302_fit_cons <- qns_ts3 %>% 
+  model(arima302_constant = ARIMA(total_waste ~ 1 + pdq(3,0,2)))
+
+zoo_arima302_fit <- arima(DSNY_QNS_zoo_ts, order = 1 + c(3,0,2))
+res_arima302 <- zoo_arima302_fit$residuals
+acf(res_arima302, lag.max = 36)
+pacf(res_arima302, lag.max = 36)
+accuracy(qns_arima302_fit_cons)[4]
+```
+
 ## Summary of models
 
 ${ARIMA(0,0,0)}(1,0,0)[12]$ has $RMSE \approx 4413.677$ \
-${ARIMA(3,0,0)}(1,0,0)[12]$ has $RMSE \approx 4115.02$ \
+${ARIMA(3,0,0)}(1,0,0)[12]$ has $RMSE \approx 4115.02$ and $AICc \approx 3766.23$ \
 ${ARIMA(0,0,4)(1,0,0)[12]}$ has $RMSE \approx 4162.64$ \
-${ARIMA(3,1,1)(1,0,0)[12]}$ has $RMSE \approx 4111.87$ \
-$ARIMA(3,0,2)$ has $RMSE \approx 5477.051$
+${ARIMA(3,1,1)(1,0,0)[12]}$ has $RMSE \approx 4111.87$ and $AICc \approx 3750.19$ \
+$ARIMA(3,0,2)$ has $RMSE \approx 5477.051$ and $AICc \approx 3866.63$
