@@ -35,20 +35,32 @@ The function ARIMA() will fit a regression model with ARIMA errors if exogenous 
 
 ```{r}
 auto_fit <- nyc_ts_2 %>% 
-  model(ARIMA(tw_diff1 ~ cpi_diff1 + unemp_diff1 + avg_precip_diff1 + temp_diff1 + cdd_diff1))
+  model(ARIMA(total_waste_total ~ cpi + unemp_rate + avg_precip + avg_temp + avg_CDD))
 
 report(auto_fit)
+auto_fit_resid <- auto_fit %>% residuals()
+auto_fit_resid <- auto_fit_resid[2:3]
+```
+
+
+```{r}
+auto_fit_diff <- nyc_ts_2 %>% 
+  model(ARIMA(tw_diff1 ~ cpi_diff1 + unemp_diff1 + avg_precip_diff1 + temp_diff1 + cdd_diff1))
+
+report(auto_fit_diff)
+auto_fit_diff_resid <- auto_fit_diff %>% residuals()
+auto_fit_diff_resid <- auto_fit_diff_resid[2:3]
 ```
 
 The model returns
 
 ## Auto-fit model with constant
 
-```{r}
-auto_fit_constant <- nyc_ts_2 %>% 
-  model(ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + avg_precip_diff1 + temp_diff1 + cdd_diff1))
-
-report(auto_fit_constant)
+```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
+# auto_fit_constant <- nyc_ts_2 %>% 
+#   model(ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + avg_precip_diff1 + temp_diff1 + cdd_diff1))
+# 
+# report(auto_fit_constant)
 ```
 
 ### Regression Residuals of LM w/ ARIMA(5,0,0) errors
@@ -56,9 +68,30 @@ report(auto_fit_constant)
 ```{r}
 bind_rows(
     `Regression residuals` =
-        as_tibble(residuals(auto_fit_constant, type = "regression")),
+        as_tibble(residuals(auto_fit, type = "regression")),
     `ARIMA residuals` =
-        as_tibble(residuals(auto_fit_constant, type = "innovation")),
+        as_tibble(residuals(auto_fit, type = "innovation")),
+    .id = "type"
+  ) %>%
+  mutate(
+    type = factor(type, levels=c(
+      "Regression residuals", "ARIMA residuals"))
+  ) %>%
+  ggplot(aes(x = month_num, y = .resid)) +
+  geom_line() +
+  facet_grid(vars(type)) + 
+  labs(title = "Regression Residuals of LM w/ ARIMA(4,1,2) errors",
+       subtitle = "01/2005 - 12/2020",
+       x = "Month Number",
+       y = "Residuals")
+```
+
+```{r}
+bind_rows(
+    `Regression residuals` =
+        as_tibble(residuals(auto_fit_diff, type = "regression")),
+    `ARIMA residuals` =
+        as_tibble(residuals(auto_fit_diff, type = "innovation")),
     .id = "type"
   ) %>%
   mutate(
@@ -74,10 +107,6 @@ bind_rows(
        y = "Residuals")
 ```
 
-```{r}
-
-```
-
 
 ```{r echo=FALSE, results='hide', error=FALSE, include=FALSE}
 nyc_ts_2 %>% 
@@ -86,7 +115,7 @@ nyc_ts_2 %>%
             "Average Total Waste" = mean(total_waste_total))
 ```
 
-#### KPSS Test for 'total_waste' 
+#### KPSS Test for auto_fit_resid and auto_fit_diff_resid 
 \
 $H_0: \text{The time series is trend stationary}$ vs $H_a: \text{The time series is not trend stationary}$
 
@@ -94,10 +123,10 @@ If the p-value of the test is less than some significance level (e.g. $\alpha = 
 
 ```{r kpss test}
 #total waste values
-nyc_ts_2 %>% features(total_waste_total, unitroot_kpss)
+auto_fit_resid %>% features(.resid, unitroot_kpss)
 
 #differenced values
-nyc_ts_2 %>% features(tw_diff1, unitroot_kpss)
+auto_fit_diff_resid %>% features(.resid, unitroot_kpss)
 ```
 
 According to the results of the KPSS test, we reject the $H_0$ when evaluating the total_waste values. We fail to reject the $H_0$ when evaluating the differenced values
@@ -149,134 +178,234 @@ nyc_ts_2 %>%
 # Creating ARIMA models with zoo() and the arima package from stats()
 
 ```{r}
-DSNY_NYC_zoo_ts <- ts(final_nyc_data_small[,2],
-   start = as.yearmon(final_nyc_data_small$month)[1],
+auto_fit_resid <- left_join(auto_fit_resid,final_nyc_data_small)[1:3]
+auto_fit_diff_resid <- left_join(auto_fit_diff_resid,final_nyc_data_small)[1:3] %>% replace_na(list(.resid = 0))
+```
+
+
+```{r}
+dr_auto_fit_resid_ts <- ts(auto_fit_resid[,2],
+   start = as.yearmon(auto_fit_resid$month)[1],
    frequency = 12)
+
+dr_auto_fit_diff_resid_ts <- ts(auto_fit_diff_resid[,2],
+   start = as.yearmon(auto_fit_diff_resid$month)[1],
+   frequency = 12)
+```
+
+
+```{r}
+# DSNY_NYC_zoo_ts <- ts(final_nyc_data_small[,2],
+#    start = as.yearmon(final_nyc_data_small$month)[1],
+#    frequency = 12)
 # autoplot(as.zoo(DSNY_NYC_zoo_ts))
 ```
+
+# We will create ARIMA models with the differenced auto fit residuals
 
 ## $\text{ARIMA(0,0,0)}$ with constant
 ${ARIMA(0,0,0)}$
 
 ```{r}
-nyc_arima000_fit_cons <- nyc_ts_2 %>% 
-  model(arima000_constant = ARIMA(total_waste_total ~ 1 + pdq(0,0,0)))
+dr_diff_arima000_fit_cons <- auto_fit_diff_resid %>% 
+  model(arima000_constant = ARIMA(.resid ~ 1 + pdq(0,0,0)))
 
-zoo_arima000_fit <- arima(DSNY_NYC_zoo_ts, order = 1 + c(0,0,0))
-res_arima000 <- zoo_arima000_fit$residuals
-acf(res_arima000, lag.max = 36)
-pacf(res_arima000, lag.max = 36)
-accuracy(nyc_arima000_fit_cons)[4]
+diff_zoo_arima000_fit <- arima(dr_auto_fit_diff_resid_ts, order = 1 + c(0,0,0))
+diff_res_arima000 <- diff_zoo_arima000_fit$residuals
+acf(diff_res_arima000, lag.max = 36)
+pacf(diff_res_arima000, lag.max = 36)
+accuracy(dr_diff_arima000_fit_cons)[4]
+dr_diff_arima000_fit_cons %>% report()
 ```
 
-RMSE = 20560.3, The first significant lag in the ACF plot is lag 4. The first significant lag in the PACF plot is also lag 4. Both these lags are negative, which indicate the use of an MA() argument. The seasonal lags are once again present in both plots. In the PACF() plot, lag 8 is negative and significant.
+RMSE = 13383.55 and AICc=4197.26, The first significant lag in the ACF plot is lag 6. The first significant lag in the PACF plot is also lag 6. Both these lags are negative, which indicate the use of an MA() argument. The seasonal lags are once again present in both plots. In the PACF() plot, lag 8 is negative and significant.
 
-## $\text{ARIMA(0,0,4)}$ with constant
-${ARIMA(0,0,4)}$
-
-```{r}
-nyc_arima004_fit_cons <- nyc_ts_2 %>% 
-  model(arima004_constant = ARIMA(total_waste_total ~ 1 + 
-                                    pdq(0,0,4)))
-        
-zoo_arima004_fit <- arima(DSNY_NYC_zoo_ts, 
-                          order = 1 + c(0,0,4))
-#names(zoo_arima000_fit)
-res_arima004 <- zoo_arima004_fit$residuals
-acf(res_arima004, lag.max = 36)
-pacf(res_arima004, lag.max = 36)
-accuracy(nyc_arima004_fit_cons)[4]
-```
-
-RMSE = 17602.62. Seasonal lags worth exploring. In the PACF plot, lag = 9 is negatively autocorrelated and significant
-
-## $\text{ARIMA(0,0,4)(1,0,0)}$ with constant and seasonal
-$ARIMA(0,0,4)(1,0,0)_{12}$
+## $\text{ARIMA(0,0,0)(1,0,0)[12]}$ with constant
+${ARIMA(0,0,0)(1,0,0)[12]}$
 
 ```{r}
-nyc_arima004_100_seasonal_fit_cons <- nyc_ts_2 %>% 
-  model(arima004_100_constant = ARIMA(total_waste_total ~ 1 + 
-                                    pdq(0,0,4) + 
-                                    PDQ(1,0,0, 
+dr_diff_arima000_100_fit_cons <- auto_fit_diff_resid %>% 
+  model(arima000_100_constant = ARIMA(.resid ~ 1 + 
+                                    pdq(0,0,0) +
+                                    PDQ(1,0,0,
                                         period = 12)))
         
-zoo_arima004_100_seasonalfit <- arima(DSNY_NYC_zoo_ts, 
-                          order = 1 + c(0,0,4),
+diff_zoo_arima000_100_fit <- arima(dr_auto_fit_diff_resid_ts, 
+                          order = 1 + c(0,0,0),
                           seasonal = list(order = c(1, 0L, 0L), 
                                           period = 12))
 #names(zoo_arima000_fit)
-res_arima004_100 <- zoo_arima004_100_seasonalfit$residuals
-acf(res_arima004_100, lag.max = 36)
-pacf(res_arima004_100, lag.max = 36)
-accuracy(nyc_arima004_100_seasonal_fit_cons)[4]
+diff_res_arima000_100 <- diff_zoo_arima000_100_fit$residuals
+acf(diff_res_arima000_100, lag.max = 36)
+pacf(diff_res_arima000_100, lag.max = 36)
+accuracy(dr_diff_arima000_100_fit_cons)[4]
+dr_diff_arima000_100_fit_cons %>% report()
 ```
 
-RMSE = 13926.64. Most of the lags are now bounded between -0.15 and 0.15. In the PACF, the first significant lag is lag = 9, which is barely significant and negative. Lag = 12 is also significant. 
+RMSE = 13262.28	and AICc = 4173.22. Seasonal lags worth exploring. In the PACF plot, lag = 9 is negatively autocorrelated and significant
 
-we can also work with the differenced values, we will create some models with them
+# We will create ARIMA models with the auto fit residuals
 
-## $\text{ARIMA(0,1,0)}$ with constant
-
-${ARIMA(0,1,0)}$
+$ARIMA(0,0,0)$
 
 ```{r}
-nyc_arima010_fit_cons <- nyc_ts_2 %>% 
-  model(arima010_constant = ARIMA(total_waste_total ~ 1 + pdq(0,1,0)))
-
-zoo_arima010_fit <- arima(DSNY_NYC_zoo_ts, 
-                          order = 1 + c(0,1,0))
-
-res_arima010 <- zoo_arima010_fit$residuals
-acf(res_arima010, lag.max = 36)
-pacf(res_arima010, lag.max = 36)
-accuracy(nyc_arima010_fit_cons)[4]
+dr_arima000_fit_cons <-  auto_fit_resid %>% 
+  model(arima000_constant = ARIMA(.resid ~ 1 + 
+                                    pdq(0,0,0)
+                                    ))
+        
+zoo_arima000_fit <- arima(dr_auto_fit_resid_ts, 
+                          order = 1 + c(0,0,0)
+                          )
+#names(zoo_arima000_fit)
+res_arima000 <- zoo_arima000_fit$residuals
+acf(res_arima000, lag.max = 36)
+pacf(res_arima000, lag.max = 36)
+accuracy(dr_arima000_fit_cons)[4]
+dr_arima000_fit_cons %>% report()
 ```
 
-RMSE = 21209.02. In the ACF plot, the seasonal lags are once again significant. Looking at the PACF, the first significant lag is 4, and is negatively autocorrelated.
+RMSE = 13926.64 and AICc= 4177.21. Most of the lags are now bounded between -0.20 and 0.20. In the PACF, the first significant lag is lag = 6, which is barely significant and negative. Lag = 13 is also significant and negative. 
+
+## $\text{ARIMA(0,0,0)(1,0,0)[12]}$ with constant
+
+${ARIMA(0,0,0)(1,0,0)[12]}$
+
+```{r}
+# nyc_arima010_fit_cons <- nyc_ts_2 %>% 
+#   model(arima010_constant = ARIMA(total_waste_total ~ 1 + pdq(0,1,0)))
+# 
+# zoo_arima010_fit <- arima(DSNY_NYC_zoo_ts, 
+#                           order = 1 + c(0,1,0))
+# 
+# res_arima010 <- zoo_arima010_fit$residuals
+# acf(res_arima010, lag.max = 36)
+# pacf(res_arima010, lag.max = 36)
+# accuracy(nyc_arima010_fit_cons)[4]
+
+dr_arima000_100_fit_cons <-  auto_fit_resid %>% 
+  model(arima000_100_constant = ARIMA(.resid ~ 1 + 
+                                    pdq(0,0,0) + 
+                                      PDQ(1,0,0,
+                                          period = 12)
+                                    ))
+        
+zoo_arima000_100_fit <- arima(dr_auto_fit_resid_ts, 
+                          order = 1 + c(0,0,0),
+                          seasonal = list(order = c(1, 0L, 0L), 
+                                          period = 12)
+                          )
+#names(zoo_arima000_fit)
+res_arima000_100 <- zoo_arima000_100_fit$residuals
+acf(res_arima000, lag.max = 36)
+pacf(res_arima000, lag.max = 36)
+accuracy(dr_arima000_100_fit_cons)[4]
+dr_arima000_100_fit_cons %>% report()
+```
+
+RMSE = 12640.71 and AICc=4167.01. 
+
+```{r}
+# nyc_arima010_100_fit_cons <- nyc_ts_2 %>% 
+#   model(arima010_100_constant = ARIMA(total_waste_total ~ 1 + 
+#                                         pdq(0,1,0) + 
+#                                         PDQ(1,0,0, 
+#                                             period = 12)))
+# 
+# zoo_arima010_100_fit <- arima(DSNY_NYC_zoo_ts, 
+#                               order = 1 + c(0,1,0),
+#                               seasonal = list(order = c(1,0L,0L),
+#                                               period = 12))
+# res_arima010_100 <- zoo_arima010_100_fit$residuals
+# acf(res_arima010_100, lag.max = 36)
+# pacf(res_arima010_100, lag.max = 36)
+# accuracy(nyc_arima010_100_fit_cons)[4]
+```
+```{r}
+# nyc_arima012_100_fit_cons <- nyc_ts_2 %>% 
+#   model(arima012_100_constant = ARIMA(total_waste_total ~ 1 + 
+#                                         pdq(0,1,2) + 
+#                                         PDQ(1,0,0, 
+#                                             period = 12)))
+# 
+# zoo_arima012_100_fit <- arima(DSNY_NYC_zoo_ts, 
+#                               order = 1 + c(0,1,2),
+#                               seasonal = list(order = c(1,0L,0L),
+#                                               period = 12))
+# res_arima012_100 <- zoo_arima012_100_fit$residuals
+# acf(res_arima012_100, lag.max = 36)
+# pacf(res_arima012_100, lag.max = 36)
+# accuracy(nyc_arima012_100_fit_cons)[4]
+```
+
+
+```{r}
+# nyc_arima013_100_fit_cons <- nyc_ts_2 %>% 
+#   model(arima013_100_constant = ARIMA(total_waste_total ~ 1 + 
+#                                         pdq(0,1,3) + 
+#                                         PDQ(1,0,0, 
+#                                             period = 12)))
+# 
+# zoo_arima013_100_fit <- arima(DSNY_NYC_zoo_ts, 
+#                               order = 1 + c(0,1,3),
+#                               seasonal = list(order = c(1,0L,0L),
+#                                               period = 12))
+# res_arima013_100 <- zoo_arima013_100_fit$residuals
+# acf(res_arima013_100, lag.max = 36)
+# pacf(res_arima013_100, lag.max = 36)
+# accuracy(nyc_arima013_100_fit_cons)[4]
+```
+
 
 ## $\text{ARIMA(0,1,4)(1,0,0)}$ with constant and seasonal
 
 ${ARIMA(0,1,4)(1,0,0)[12]}$
 
 ```{r}
-nyc_arima014_100_fit_cons <- nyc_ts_2 %>% 
-  model(arima014_100_constant = ARIMA(total_waste_total ~ 1 + 
-                                        pdq(0,1,4) + 
-                                        PDQ(1,0,0, 
-                                            period = 12)))
-
-zoo_arima014_100_fit <- arima(DSNY_NYC_zoo_ts, 
-                              order = 1 + c(0,1,4),
-                              seasonal = list(order = c(1,0L,0L),
-                                              period = 12))
-res_arima014_100 <- zoo_arima014_100_fit$residuals
-acf(res_arima014_100, lag.max = 36)
-pacf(res_arima014_100, lag.max = 36)
-accuracy(nyc_arima014_100_fit_cons)[4]
+# nyc_arima014_100_fit_cons <- nyc_ts_2 %>% 
+#   model(arima014_100_constant = ARIMA(total_waste_total ~ 1 + 
+#                                         pdq(0,1,4) + 
+#                                         PDQ(1,0,0, 
+#                                             period = 12)))
+# 
+# zoo_arima014_100_fit <- arima(DSNY_NYC_zoo_ts, 
+#                               order = 1 + c(0,1,4),
+#                               seasonal = list(order = c(1,0L,0L),
+#                                               period = 12))
+# res_arima014_100 <- zoo_arima014_100_fit$residuals
+# acf(res_arima014_100, lag.max = 36)
+# pacf(res_arima014_100, lag.max = 36)
+# accuracy(nyc_arima014_100_fit_cons)[4]
 ```
-
-RMSE = 13816.72. In both plots, lag = 11. Is the lag that is the most autocorrelated.
-The RMSE has decreasaed when compared to $ARIMA(0,0,4)(1,0,0)_{12}$
 
 ## Auto-arima 
 
 For our final model, we will look and compare the results of an auto-arima model from the feasts package.
 
 ```{r}
-nyc_auto_arima_fit_cons <- nyc_ts_2 %>% 
-  model(stepwise = ARIMA(total_waste_total),
-        search = ARIMA(total_waste_total, 
+dr_auto_arima_resid <- auto_fit_resid %>% 
+  model(stepwise = ARIMA(.resid),
+        search = ARIMA(.resid, 
                        stepwise = FALSE, 
                        approximation = FALSE))
 
-accuracy(nyc_auto_arima_fit_cons)[1:4]
+accuracy(dr_auto_arima_resid)[1:4]
+
+dr_diff_auto_arima_resid <- auto_fit_diff_resid %>% 
+  model(stepwise = ARIMA(.resid),
+        search = ARIMA(.resid, 
+                       stepwise = FALSE, 
+                       approximation = FALSE))
+
+accuracy(dr_diff_auto_arima_resid)[1:4]
 ```
 
 The stepwise model has RMSE = 16493.55, while the search model has RMSE = 16990.13. We will take a look at the ACF and PACF plots of the stepwise model.
 
 ```{r}
-nyc_auto_arima_fit_cons %>% select(.model = stepwise) %>% report()
-# print("--------------")
+dr_auto_arima_resid %>% select(.model = stepwise) %>% report()
+print("--------------")
+dr_diff_auto_arima_resid %>% select(.model = stepwise) %>% report()
 # nyc_auto_arima_fit_cons %>% select(.model = search) %>% report()
 ```
 
@@ -308,7 +437,7 @@ ${ARIMA(2,1,4)}$ is the step model and has RMSE = 16936.99
 
 # Dynamic Regression models with ARIMA models from before
 \
-## $text{ARIMA(0,0,4)(1,0,0)[12]}$
+## $text{ARIMA(0,0,0)(1,0,0)[12]}$ on differenced data
 \
 ```{r}
 dr_diff_cons_fit1 <- nyc_ts_2 %>% 
@@ -316,7 +445,7 @@ dr_diff_cons_fit1 <- nyc_ts_2 %>%
                 avg_precip_diff1 + temp_diff1 + 
                 cdd_diff1 +
                 trend() +
-                pdq(0,0,4) + 
+                pdq(0,0,0) + 
                 PDQ(1,0,0,
                     period = 12)))
 
@@ -341,12 +470,44 @@ When adding the trend() argument, the coefficients of the majority of the predic
   ggplot(aes(x = month_num, y = .resid)) +
   geom_line() +
   facet_grid(vars(type)) + 
-  labs(title = "Regression Residuals of LM w/ ARIMA(0,0,4)(1,0,0)[12] errors",
+  labs(title = "Regression Residuals of LM w/ ARIMA(0,0,0)(1,0,0)[12] errors",
        subtitle = "01/2005 - 12/2020",
        x = "Month Number",
        y = "Residuals")
 ```
+```{r}
+dr_cons_fit <- nyc_ts_2 %>% 
+  model(dynam_regress_ = ARIMA(total_waste_total ~ cpi + unemp_rate + avg_precip + avg_temp + 
+                                      avg_CDD +
+                trend() +
+                pdq(0,0,0) + 
+                PDQ(1,0,0,
+                    period = 12)))
 
+report(dr_cons_fit)
+accuracy(dr_cons_fit)
+```
+
+```{r}
+  bind_rows(
+    `Regression residuals` =
+        as_tibble(residuals(dr_cons_fit, type = "regression")),
+    `ARIMA residuals` =
+        as_tibble(residuals(dr_cons_fit, type = "innovation")),
+    .id = "type"
+  ) %>%
+  mutate(
+    type = factor(type, levels=c(
+      "Regression residuals", "ARIMA residuals"))
+  ) %>%
+  ggplot(aes(x = month_num, y = .resid)) +
+  geom_line() +
+  facet_grid(vars(type)) + 
+  labs(title = "Regression Residuals of LM w/ ARIMA(0,0,0)(1,0,0)[12] errors",
+       subtitle = "01/2005 - 12/2020",
+       x = "Month Number",
+       y = "Residuals")
+```
 
 ```{r}
 nyc_data_small_future_diff <- new_data(nyc_ts_2,4) %>% 
@@ -370,16 +531,16 @@ forecast(dr_diff_cons_fit1, new_data = nyc_data_small_future_diff) %>%
 ## ${ARIMA(0,1,4)(1,0,0)[12]}$
 
 ```{r}
-dr_diff_cons_fit2 <- nyc_ts_2 %>% 
-  model(dynam_regress_diff2 = ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + 
-                avg_precip_diff1 + temp_diff1 + 
-                cdd_diff1 +
-                pdq(0,1,4) + 
-                PDQ(1,0,0,
-                    period = 12)))
-
-report(dr_diff_cons_fit2)
-accuracy(dr_diff_cons_fit2)
+# dr_diff_cons_fit2 <- nyc_ts_2 %>% 
+#   model(dynam_regress_diff2 = ARIMA(tw_diff1 ~ 1 + cpi_diff1 + unemp_diff1 + 
+#                 avg_precip_diff1 + temp_diff1 + 
+#                 cdd_diff1 +
+#                 pdq(0,1,4) + 
+#                 PDQ(1,0,0,
+#                     period = 12)))
+# 
+# report(dr_diff_cons_fit2)
+# accuracy(dr_diff_cons_fit2)
 ```
 
 Was given an error: Warning: Provided exogenous regressors are rank deficient, removing regressors: `trend()`
