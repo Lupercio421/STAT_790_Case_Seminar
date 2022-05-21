@@ -236,6 +236,7 @@ res_arima012_100_seasonal <- zoo_arima012_100_seasonal_fit$residuals
 acf(res_arima012_100_seasonal, lag.max = 36)
 pacf(res_arima012_100_seasonal, lag.max = 36)
 accuracy(bk_arima012_100_fit_seasonal_cons)[4]
+bk_arima012_100_fit_seasonal_cons %>% report()
 ```
 
 RMSE = 4427.169
@@ -307,6 +308,7 @@ res_arima303 <- zoo_arima303_fit$residuals
 acf(res_arima303, lag.max = 36)
 pacf(res_arima303, lag.max = 36)
 accuracy(bk_arima303_fit_cons)[4]
+bk_arima303_fit_cons %>% report()
 ```
 
 ## Summary of models

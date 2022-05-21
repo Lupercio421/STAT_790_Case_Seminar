@@ -255,6 +255,7 @@ res_arima012_100 <- zoo_arima012_100_fit$residuals
 acf(res_arima012_100, lag.max = 36)
 pacf(res_arima012_100, lag.max = 36)
 accuracy(man_arima012_100_fit_cons)[4]
+man_arima012_100_fit_cons %>% report()
 ```
 
 RMSE = 2215.12. The majority of the ACF and PACF lag values are contained within bounds. However, lag 16 in both plots are significant. Being bounded b/w (-0.15, 0.15). There wouldn't be a direct way to address this lag without adding a high MA argument and potentialy overfitting this model. 
@@ -280,6 +281,7 @@ res_arima014_100 <- zoo_arima014_100_fit$residuals
 acf(res_arima014_100, lag.max = 36)
 pacf(res_arima014_100, lag.max = 36)
 accuracy(man_arima014_100_fit_cons)[4]
+man_arima014_100_fit_cons %>% report()
 ```
 
 RMSE = 2208.185. Which is a decrease when compared to ${ARIMA(0,1,2)(1,0,0)[12]}$. Again, the majority of the lags are contained within the bounds.However we are not able to make the lag 16 insignificant in both plots.
@@ -332,6 +334,7 @@ res_arima015 <- zoo_arima015_fit$residuals
 acf(res_arima015, lag.max = 36)
 pacf(res_arima015, lag.max = 36)
 accuracy(man_arima015_fit_cons)[4]
+man_arima015_fit_cons %>% report()
 ```
 
 Yeah this model was going to have significant lags without adressing the seasonality.
