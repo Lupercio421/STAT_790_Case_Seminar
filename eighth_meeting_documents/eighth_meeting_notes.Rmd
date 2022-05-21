@@ -58,7 +58,6 @@ DSNY_third_bronx %>%
        subtitle = "01/2005 - 12/2020")
 ```
 
-
 ```{r kpss test}
 #total waste values
 bx_ts2 %>% features(total_waste, unitroot_kpss)
@@ -151,6 +150,7 @@ res_arima004_100 <- zoo_arima004_100_fit$residuals
 acf(res_arima004_100, lag.max = 36)
 pacf(res_arima004_100, lag.max = 36)
 accuracy(bx_arima004_100_fit_cons)[4]
+bx_arima004_100_fit_cons %>% report()
 ```
 
 RMSE = 2304.198
@@ -301,6 +301,7 @@ res_arima011_cons_100_12 <- zoo_arima011_cons_100_12fit$residuals
 acf(res_arima011_cons_100_12, lag.max = 36)
 pacf(res_arima011_cons_100_12, lag.max = 36)
 accuracy(bx_arima011_cons_100_12)
+bx_arima011_cons_100_12 %>% report()
 ```
 
 This model returns the lowest RMSE. The seasonal lags in th PACF are no longer significant. All non-seasonal lags, except for lag = 11, are insignificant.  
@@ -336,6 +337,7 @@ res_arima003_cons_fit <- zoo_arima003_cons_fit$residuals
 acf(res_arima003_cons_fit, lag.max = 36)
 pacf(res_arima003_cons_fit, lag.max = 36)
 accuracy(bx_arima003_cons)
+bx_arima003_cons %>% report()
 ```
 
 ## In conclusion
