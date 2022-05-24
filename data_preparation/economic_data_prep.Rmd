@@ -34,8 +34,7 @@ NYS_unem <- NYUR %>%
 ```
 
 # NYC Unemployment Rate
-https://statistics.labor.ny.gov/laus.asp
-https://statistics.labor.ny.gov/laus.asp
+https://statistics.labor.ny.gov/lslaus.shtm
 Not seasonaly adjusted - https://statistics.labor.ny.gov/lstechseas.shtm
 https://www.bls.gov/regions/new-york-new-jersey/data/xg-tables/ro2xglausnyc.htm
 
