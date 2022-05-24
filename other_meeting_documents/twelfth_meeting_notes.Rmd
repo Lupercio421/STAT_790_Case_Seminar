@@ -1,7 +1,7 @@
 ---
-title: "Queens Time Series"
+title: "Meeting 12 notes"
 author: "Daniel L."
-date: "5/4/2022"
+date: "4/29/2022"
 output: html_document
 ---
 
