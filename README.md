@@ -7,7 +7,8 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
   + A common pattern seen within the models was the use of the differenced series, adding non-seasonal MA() arguments and seasonal AR() arguments
 * A preliminary multiple linear regression model was used, with the total tonnage collected in NYC per month, being regressed onto external variables
   + This model returned an adjusted r-squared = 0.41
-* A dynamic was introduced, where we are allowing the errors from a regression model to contain autocorrelation
+* A dynamic regression model was introduced
+  + Where we are allowing the errors from a regression model to contain autocorrelation
   + These models will have two error terms - the error from the regression model, which we denote by 𝜂_𝑡 and the error from the ARIMA model, which we denote by 𝜀_𝑡
   +  Only the ARIMA model errors are assumed to be white noise
 
