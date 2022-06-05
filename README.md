@@ -17,7 +17,7 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
 * [NYC unemployment rate](https://statistics.labor.ny.gov/lslaus.shtm)
 * [NYS-NJ Consumer Price Index](https://www.bls.gov/regions/new-york-new-jersey/data/xg-tables/ro2xgcpiny1967.htm)
 
-## Resources that helped me complete this project
+## Resources that helped me complete this project:
 * [Forecasting: Principles and Practice, third edition](https://otexts.com/fpp3/)
 * [Advanced R](https://adv-r.hadley.nz/index.html)
 * [R for Data Science](https://r4ds.had.co.nz/)
