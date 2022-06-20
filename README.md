@@ -1,5 +1,5 @@
 # STAT_790_Case_Seminar
-Hey everyone, this semester I am enrolled in the Project Seminar course for the B.A./M.A. program. Using data from the [NYC Department of Sanitation](https://data.cityofnewyork.us/City-Government/DSNY-Monthly-Tonnage-Data/ebb7-mvp5), I am analyzing waste tonnage collected throughout the five boroughs. The data has been imported into R using an [API](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) and the RSocrata package.
+Hey everyone! During the Spring '22 semester, I enrolled in the Project Seminar course for the B.A./M.A. program. Using data from the [NYC Department of Sanitation](https://data.cityofnewyork.us/City-Government/DSNY-Monthly-Tonnage-Data/ebb7-mvp5), I analyzed waste tonnage collected throughout the five boroughs. The data has been imported into R using an [API](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) and the RSocrata package.
 
 ## Completed tasks for this project:
 * The challenge that I took on was to create a univariate time series model to anaylze the total waste collected for each of the five boroughs Bronx
@@ -21,7 +21,7 @@ Hey everyone, this semester I am enrolled in the Project Seminar course for the 
 * [Forecasting: Principles and Practice, third edition](https://otexts.com/fpp3/)
 * [Advanced R](https://adv-r.hadley.nz/index.html)
 * [R for Data Science](https://r4ds.had.co.nz/)
-* Numerous research papers taking on a similar task within other countries
+* Numerous research [papers](https://cuny620-my.sharepoint.com/:f:/g/personal/daniel_lupercio958_myhunter_cuny_edu/EtBpekWQi1pAi2XUC5W8-r0BC0B39XrX-anDnIfBkssyyA?e=WwiEOH) taking on a similar task within other countries
 
 #### The final paper can be read [here](https://github.com/Lupercio421/STAT_790_Case_Seminar/blob/main/final_paper/Lupercio_Daniel_STAT_790_final_paper.pdf).
 
