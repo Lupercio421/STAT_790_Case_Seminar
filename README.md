@@ -2,7 +2,7 @@
 Hey everyone! During the Spring '22 semester, I enrolled in the Project Seminar course for the B.A./M.A. program. Using data from the [NYC Department of Sanitation](https://data.cityofnewyork.us/City-Government/DSNY-Monthly-Tonnage-Data/ebb7-mvp5), I analyzed waste tonnage collected throughout the five boroughs. The data has been imported into R using an [API](https://dev.socrata.com/foundry/data.cityofnewyork.us/ebb7-mvp5) and the RSocrata package.
 
 ## Completed tasks for this project:
-* The challenge that I took on was to create a univariate time series model to anaylze the total waste collected for each of the five boroughs Bronx
+* The challenge that I took on was to create a univariate time series model to anaylze the total waste collected for each of the five boroughs
   + All of the models used seasonal ARIMA models to analyze each time series
   + A common pattern seen within the models was the use of the differenced series, adding non-seasonal MA() arguments and seasonal AR() arguments
 * A preliminary multiple linear regression model was used, with the total tonnage collected in NYC per month, being regressed onto external variables
